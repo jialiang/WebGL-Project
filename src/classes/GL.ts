@@ -19,11 +19,9 @@ class WebGL2RenderingContextConstructor {
   }
 }
 
-const WebGL2RenderingContext_prototype = WebGL2RenderingContext.prototype;
-
 WebGL2RenderingContext = Object.setPrototypeOf(
   WebGL2RenderingContextConstructor,
-  WebGL2RenderingContext_prototype
+  WebGL2RenderingContext.prototype
 );
 
 export default class GL extends WebGL2RenderingContext {

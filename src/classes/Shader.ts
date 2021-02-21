@@ -57,16 +57,15 @@ export default class Shader {
         this.uniformLocations[name] = location;
       }
 
-      if (gl[type].length - 1 !== value.length) {
-        console.warn(
-          `${type} expects ${gl[type].length - 1} values parameter but found ${
-            value.length
-          }.`
-        );
-        return;
+      switch (type) {
+        case "uniformMatrix2fv":
+        case "uniformMatrix3fv":
+        case "uniformMatrix4fv":
+          gl[type](location, false, value);
+          break;
+        default:
+          gl[type](location, value[0], value[1], value[2], value[3]);
       }
-
-      gl[type](location, value[0], value[1], value[2], value[3]);
     });
 
     if (!programActivated) this.deactivate();
@@ -95,9 +94,23 @@ export default class Shader {
     return true;
   }
 
+  // assume shader activated
   renderModel(model: Model_TYPE): Shader {
-    const { gl } = this;
-    const { vao, indexCount, vertexCount, drawMode } = model;
+    const { gl, program } = this;
+    const { vao, indexCount, vertexCount, drawMode, transformation } = model;
+
+    if (gl.getParameter(gl.CURRENT_PROGRAM) !== program) this.activate();
+
+    this.updateUniform(
+      [
+        {
+          name: "u_ModelViewMatrix",
+          value: transformation.modelViewMatrix,
+          type: "uniformMatrix4fv",
+        },
+      ],
+      true
+    );
 
     gl.bindVertexArray(vao);
 

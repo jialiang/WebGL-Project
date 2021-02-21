@@ -14,13 +14,30 @@ window.addEventListener("load", () => {
 
   gl.createVertexArrayObject(Grid.createGridVaoData(gl));
 
-  const onBeforeRender = () => shader.activate();
+  let rotation = 0;
+  let scale = 1;
+  const model = gl.getModel("grid");
+
+  const onBeforeRender = () => console.log("Before render");
   const onRender = () => {
     gl.clearCanvas();
 
-    const model = gl.getModel("grid");
+    if (model) {
+      rotation += 0.1;
+      scale += 0.001;
 
-    if (model) shader.renderModel(model);
+      rotation %= 360;
+      scale %= 2;
+
+      model.transformation.setTransformation({
+        position: [0, 0, -1],
+        rotation: [rotation, rotation, rotation],
+        scale: [scale, scale, 1],
+        isIncremental: false,
+      });
+
+      shader.renderModel(model);
+    }
   };
 
   const renderLoop = new RenderLoop(onRender, onBeforeRender);

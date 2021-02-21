@@ -1,44 +1,46 @@
 "use strict";
 
-const gulp = require("gulp");
+const { src, dest, task, watch } = require("gulp");
 const browserify = require("browserify");
-const buffer = require("vinyl-buffer");
-const source = require("vinyl-source-stream");
-const sourcemaps = require("gulp-sourcemaps");
-const watchify = require("watchify");
-const tsify = require("tsify");
+const exorcist = require("exorcist");
 const fancyLog = require("fancy-log");
+const minifyStream = require("minify-stream");
+const shakeify = require("common-shakeify");
+const source = require("vinyl-source-stream");
+const tsify = require("tsify");
+const watchify = require("watchify");
 
-const watchedBrowserify = watchify(
-  browserify({
-    basedir: ".",
-    debug: true,
-    entries: ["src/main.ts"],
-    cache: {},
-    packageCache: {},
-  }).plugin(tsify)
-);
+const watchedBrowserify = browserify({
+  basedir: ".",
+  debug: true,
+  entries: ["src/main.ts"],
+  cache: {},
+  packageCache: {},
+})
+  .plugin(tsify)
+  .plugin(watchify)
+  .plugin(shakeify)
+  .transform("uglifyify", { global: true })
+  .transform("babelify", {
+    presets: ["@babel/preset-env"],
+    extensions: [".ts"],
+  });
 
-const copyHTML = () => gulp.src("src/*.html").pipe(gulp.dest("dist"));
+const copyHTML = () => src("src/*.html").pipe(dest("dist"));
 
-const bundle = () =>
+const buildJS = () =>
   watchedBrowserify
-    .transform("babelify", {
-      presets: ["@babel/preset-env"],
-      extensions: [".ts"],
-    })
     .bundle()
     .on("error", fancyLog)
+    .pipe(minifyStream())
+    .pipe(exorcist("./dist/bundle.js.map"))
     .pipe(source("bundle.js"))
-    .pipe(buffer())
-    .pipe(sourcemaps.init({ loadMaps: true }))
-    .pipe(sourcemaps.write("./"))
-    .pipe(gulp.dest("dist"));
+    .pipe(dest("dist"));
 
-gulp.task("default", () => {
-  gulp.watch("./src/*.html", { ignoreInitial: false }, copyHTML);
-  bundle();
+task("default", () => {
+  watch("./src/*.html", { ignoreInitial: false }, copyHTML);
+  buildJS();
 });
 
-watchedBrowserify.on("update", bundle);
+watchedBrowserify.on("update", buildJS);
 watchedBrowserify.on("log", fancyLog);

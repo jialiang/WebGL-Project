@@ -1,4 +1,4 @@
-import { mat3, mat4, vec3, vec4, glMatrix } from "gl-matrix";
+import { mat3, mat4, vec3, vec4 } from "gl-matrix";
 
 export default class Transform {
   position: vec3;
@@ -24,6 +24,8 @@ export default class Transform {
     this.up = vec4.create();
     this.right = vec4.create();
   }
+
+  toRadian = (deg: number): number => (deg * Math.PI) / 180;
 
   setTransformation(options: {
     position?: [number, number, number];
@@ -62,17 +64,17 @@ export default class Transform {
     mat4.rotateX(
       this.modelViewMatrix,
       this.modelViewMatrix,
-      glMatrix.toRadian(this.rotation[0])
+      this.toRadian(this.rotation[0])
     );
     mat4.rotateY(
       this.modelViewMatrix,
       this.modelViewMatrix,
-      glMatrix.toRadian(this.rotation[1])
+      this.toRadian(this.rotation[1])
     );
     mat4.rotateZ(
       this.modelViewMatrix,
       this.modelViewMatrix,
-      glMatrix.toRadian(this.rotation[2])
+      this.toRadian(this.rotation[2])
     );
     mat4.scale(this.modelViewMatrix, this.modelViewMatrix, this.scale);
 

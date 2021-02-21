@@ -1,8 +1,9 @@
+import { mat4, mat3 } from "gl-matrix";
 import Transform from "./Transform";
 
 export type UniformList_TYPE = {
   name: string;
-  value: number[];
+  value: number[] | mat4 | mat3;
   type:
     | "uniform1f"
     | "uniform1i"
@@ -11,7 +12,10 @@ export type UniformList_TYPE = {
     | "uniform3f"
     | "uniform3i"
     | "uniform4f"
-    | "uniform4i";
+    | "uniform4i"
+    | "uniformMatrix2fv"
+    | "uniformMatrix3fv"
+    | "uniformMatrix4fv";
 };
 
 export type VaoOptions_TYPE = {

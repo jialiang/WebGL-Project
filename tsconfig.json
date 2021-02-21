@@ -1,13 +1,14 @@
 {
   "files": ["src/main.ts"],
   "compilerOptions": {
-    "target": "es2015",
+    "target": "es2020",
     "sourceMap": true,
     "strict": true,
     "noImplicitAny": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noImplicitReturns": true,
-    "moduleResolution": "node"
+    "moduleResolution": "node",
+    "esModuleInterop": true
   }
 }
