@@ -17,6 +17,6 @@ export const ATTRIBUTES = {
   color: {
     name: "a_color",
     location: 3,
-    componentLength: 3,
+    componentLength: 4,
   },
 };

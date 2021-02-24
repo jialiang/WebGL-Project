@@ -25,26 +25,36 @@ WebGL2RenderingContext = Object.setPrototypeOf(
 );
 
 export default class GL extends WebGL2RenderingContext {
-  modelList: Model_TYPE[] = [];
+  modelList: Record<string, Model_TYPE> = {};
+  textureList: Record<string, WebGLTexture> = {};
 
   constructor(id = "", width = 0, height = 0) {
     // @ts-expect-error WebGL2RenderingContextConstructor used instead of original constructor
     super(id);
 
+    this.cullFace(this.BACK);
+    this.frontFace(this.CCW);
+    this.enable(this.DEPTH_TEST);
+    this.enable(this.CULL_FACE);
+    this.depthFunc(this.LEQUAL);
+    this.blendFuncSeparate(
+      this.SRC_ALPHA,
+      this.ONE_MINUS_SRC_ALPHA,
+      this.ONE,
+      this.ONE_MINUS_SRC_ALPHA
+    );
+    this.enable(this.BLEND);
+    this.clearColor(0.0, 0.0, 0.0, 1.0);
+
     this.setSize(width, height);
-    this.setClearColor(0.0, 0.0, 0.0, 1.0);
     this.clearCanvas();
 
     return this;
   }
 
-  getModel = (name = ""): Model_TYPE | undefined =>
-    this.modelList.find((model) => model.name === name);
+  getModel = (name = ""): Model_TYPE | undefined => this.modelList[name];
 
-  setClearColor = (r: number, g: number, b: number, a: number): GL => {
-    this.clearColor(r, g, b, a);
-    return this;
-  };
+  getTexture = (name = ""): WebGLTexture | undefined => this.textureList[name];
 
   clearCanvas = (): GL => {
     this.clear(this.COLOR_BUFFER_BIT | this.DEPTH_BUFFER_BIT);
@@ -120,7 +130,7 @@ export default class GL extends WebGL2RenderingContext {
       );
     }
 
-    this.bindBuffer(bufferType, null);
+    this.bindBuffer(this.ARRAY_BUFFER, null);
 
     return buffer;
   };
@@ -166,14 +176,87 @@ export default class GL extends WebGL2RenderingContext {
         ...normalInfo,
       }),
       uvBuffer: this.createArrayBuffer({ value: uvArray, ...uvInfo }),
-      colorBuffer: this.createArrayBuffer({ value: colorArray, ...colorInfo }),
       indexBuffer: this.createArrayBuffer({ value: indexArray, isIndex: true }),
+      colorBuffer: this.createArrayBuffer({ value: colorArray, ...colorInfo }),
       transformation: new Transform(),
     };
 
     this.bindVertexArray(null);
-    this.modelList.push(obj);
+    this.bindBuffer(this.ELEMENT_ARRAY_BUFFER, null);
+
+    this.modelList[obj.name] = obj;
 
     return obj;
+  };
+
+  getImageFromUrl = async (url: string): Promise<TexImageSource> =>
+    new Promise<TexImageSource>((resolve, reject) => {
+      console.log(`Loading image from ${url}`);
+
+      const img = document.createElement("img");
+      const startTime = performance.now();
+
+      img.onload = () => {
+        const endTime = performance.now();
+        const elapsed = ((endTime - startTime) / 1000).toFixed(2);
+
+        console.log(`Image ${url} loaded after ${elapsed} seconds.`);
+        resolve(img);
+      };
+
+      img.onerror = () => {
+        reject(`Error loading image from ${url}.`);
+      };
+
+      img.crossOrigin = "anonymouse";
+      img.src = url;
+    });
+
+  loadTexture = (
+    name = "default",
+    image: TexImageSource,
+    flipY = false
+  ): WebGLTexture => {
+    console.log(`Creating texture ${name}...`);
+
+    const texture = this.createTexture();
+
+    if (!texture) throw `Failed to initialize WebGL Texture`;
+
+    // Flip the texture by the Y Position, So 0,0 is bottom left corner.
+    if (flipY) this.pixelStorei(this.UNPACK_FLIP_Y_WEBGL, true);
+
+    this.bindTexture(this.TEXTURE_2D, texture);
+
+    // Push image to GPU
+    this.texImage2D(
+      this.TEXTURE_2D,
+      0,
+      this.RGBA,
+      this.RGBA,
+      this.UNSIGNED_BYTE,
+      image
+    );
+
+    // Setup up scaling
+    this.texParameteri(this.TEXTURE_2D, this.TEXTURE_MAG_FILTER, this.LINEAR);
+
+    // Setup down scaling
+    this.texParameteri(
+      this.TEXTURE_2D,
+      this.TEXTURE_MIN_FILTER,
+      this.LINEAR_MIPMAP_NEAREST
+    );
+
+    // Precalculate different sizes of texture for better quality rendering.
+    this.generateMipmap(this.TEXTURE_2D);
+
+    this.bindTexture(this.TEXTURE_2D, null);
+
+    this.textureList[name] = texture;
+
+    this.pixelStorei(this.UNPACK_FLIP_Y_WEBGL, false);
+
+    return this.textureList;
   };
 }

@@ -26,7 +26,8 @@ const watchedBrowserify = browserify({
     extensions: [".ts"],
   });
 
-const copyHTML = () => src("src/*.html").pipe(dest("dist"));
+const copyStatic = () =>
+  src(["src/*.html", "src/static/**/*"]).pipe(dest("dist"));
 
 const buildJS = () =>
   watchedBrowserify
@@ -38,7 +39,11 @@ const buildJS = () =>
     .pipe(dest("dist"));
 
 task("default", () => {
-  watch("./src/*.html", { ignoreInitial: false }, copyHTML);
+  watch(
+    ["src/*.html", "src/static/**/*"],
+    { ignoreInitial: false },
+    copyStatic
+  );
   buildJS();
 });
 

@@ -6,6 +6,7 @@
   "scripts": {
     "watch": "gulp",
     "lint": "eslint . --fix",
+    "server": "http-server ./dist",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Jia Liang",
@@ -29,6 +30,7 @@
     "gulp": "^4.0.2",
     "gulp-cli": "^2.3.0",
     "gulp-typescript": "^6.0.0-alpha.1",
+    "http-server": "^0.12.3",
     "minify-stream": "^2.1.0",
     "prettier": "^2.2.1",
     "tsify": "^5.0.2",

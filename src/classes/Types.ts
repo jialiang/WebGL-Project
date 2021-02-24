@@ -45,4 +45,32 @@ export type Model_TYPE = {
   indexBuffer: WebGLBuffer;
 
   transformation: Transform;
+  texture?: WebGLTexture;
 };
+
+export class XY {
+  x: number;
+  y: number;
+
+  constructor(x = 0, y = 0) {
+    this.x = x;
+    this.y = y;
+  }
+
+  do(operation: "+" | "-" | "*" | "/", b: XY): XY {
+    const { x, y } = this;
+
+    switch (operation) {
+      case "+":
+        return new XY(x + b.x, y + b.y);
+      case "-":
+        return new XY(x - b.x, y - b.y);
+      case "*":
+        return new XY(x * b.x, y * b.y);
+      case "/":
+        return new XY(x / b.x, y / b.y);
+      default:
+        return new XY();
+    }
+  }
+}

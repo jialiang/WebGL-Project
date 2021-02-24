@@ -1,6 +1,7 @@
 import GL from "./GL";
 import { UniformList_TYPE, Model_TYPE } from "./Types";
 import ShaderUtil from "./ShaderUtil";
+import { Camera } from "./Camera";
 
 export default class Shader {
   gl: GL;
@@ -94,23 +95,55 @@ export default class Shader {
     return true;
   }
 
-  // assume shader activated
-  renderModel(model: Model_TYPE): Shader {
+  renderModel(model: Model_TYPE, camera: Camera): Shader {
     const { gl, program } = this;
-    const { vao, indexCount, vertexCount, drawMode, transformation } = model;
+    const {
+      vao,
+      indexCount,
+      vertexCount,
+      drawMode,
+      transformation,
+      texture,
+    } = model;
 
     if (gl.getParameter(gl.CURRENT_PROGRAM) !== program) this.activate();
 
-    this.updateUniform(
-      [
-        {
-          name: "u_ModelViewMatrix",
-          value: transformation.modelViewMatrix,
-          type: "uniformMatrix4fv",
-        },
-      ],
-      true
-    );
+    const uniformList: UniformList_TYPE[] = [
+      {
+        name: "u_ModelViewMatrix",
+        value: transformation.modelViewMatrix,
+        type: "uniformMatrix4fv",
+      },
+      {
+        name: "u_ProjectionMatrix",
+        value: camera.projectionMatrix,
+        type: "uniformMatrix4fv",
+      },
+      {
+        name: "u_ViewMatrix",
+        value: camera.transformation.viewMatrix,
+        type: "uniformMatrix4fv",
+      },
+    ];
+
+    if (texture) {
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, texture);
+
+      uniformList.push({
+        name: "u_Texture",
+        value: [0],
+        type: "uniform1i",
+      });
+    }
+
+    uniformList.push({
+      name: "u_hasTexture",
+      value: [texture ? 1 : 0],
+      type: "uniform1f",
+    });
+
+    this.updateUniform(uniformList, true);
 
     gl.bindVertexArray(vao);
 
@@ -118,6 +151,7 @@ export default class Shader {
     else gl.drawArrays(drawMode, 0, vertexCount);
 
     gl.bindVertexArray(null);
+    gl.bindTexture(gl.TEXTURE_2D, null);
 
     return this;
   }

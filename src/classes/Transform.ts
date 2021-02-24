@@ -25,7 +25,7 @@ export default class Transform {
     this.right = vec4.create();
   }
 
-  toRadian = (deg: number): number => (deg * Math.PI) / 180;
+  static toRadian = (deg: number): number => (deg * Math.PI) / 180;
 
   setTransformation(options: {
     position?: [number, number, number];
@@ -34,6 +34,11 @@ export default class Transform {
     isIncremental?: boolean;
   }): Transform {
     const { position, scale, rotation, isIncremental = true } = options;
+    const {
+      position: oldPosition,
+      scale: oldScale,
+      rotation: oldRotation,
+    } = this;
 
     let newPosition = vec3.create();
     let newScale = vec3.create();
@@ -44,9 +49,9 @@ export default class Transform {
     if (rotation) newRotation = vec3.fromValues(...rotation);
 
     if (isIncremental) {
-      if (position) vec3.add(newPosition, newPosition, this.position);
-      if (scale) vec3.add(newScale, newScale, this.scale);
-      if (rotation) vec3.add(newRotation, newRotation, this.rotation);
+      if (position) vec3.add(newPosition, newPosition, oldPosition);
+      if (scale) vec3.add(newScale, newScale, oldScale);
+      if (rotation) vec3.add(newRotation, newRotation, oldRotation);
     }
 
     if (position) this.position = newPosition;
@@ -59,46 +64,41 @@ export default class Transform {
   }
 
   updateMatrix(): mat4 {
-    mat4.identity(this.modelViewMatrix);
-    mat4.translate(this.modelViewMatrix, this.modelViewMatrix, this.position);
-    mat4.rotateX(
-      this.modelViewMatrix,
-      this.modelViewMatrix,
-      this.toRadian(this.rotation[0])
-    );
-    mat4.rotateY(
-      this.modelViewMatrix,
-      this.modelViewMatrix,
-      this.toRadian(this.rotation[1])
-    );
-    mat4.rotateZ(
-      this.modelViewMatrix,
-      this.modelViewMatrix,
-      this.toRadian(this.rotation[2])
-    );
-    mat4.scale(this.modelViewMatrix, this.modelViewMatrix, this.scale);
+    const { modelViewMatrix, position, scale, rotation } = this;
+    const { toRadian } = Transform;
+
+    mat4.identity(modelViewMatrix);
+    mat4.translate(modelViewMatrix, modelViewMatrix, position);
+    mat4.rotateX(modelViewMatrix, modelViewMatrix, toRadian(rotation[0]));
+    mat4.rotateY(modelViewMatrix, modelViewMatrix, toRadian(rotation[1]));
+    mat4.rotateZ(modelViewMatrix, modelViewMatrix, toRadian(rotation[2]));
+    mat4.scale(modelViewMatrix, modelViewMatrix, scale);
 
     this.calculateNormal();
     this.calculateOrientation();
 
-    return this.modelViewMatrix;
+    return modelViewMatrix;
   }
 
   calculateNormal(): mat3 {
-    mat3.normalFromMat4(this.normalMatrix, this.modelViewMatrix);
-    return this.normalMatrix;
+    const { normalMatrix, modelViewMatrix } = this;
+
+    mat3.normalFromMat4(normalMatrix, modelViewMatrix);
+
+    return normalMatrix;
   }
 
   calculateOrientation(): [vec4, vec4, vec4] {
-    this.right = vec4.fromValues(1, 0, 0, 0);
-    vec4.transformMat4(this.right, this.right, this.modelViewMatrix);
+    const { right, up, forward, modelViewMatrix } = this;
 
-    this.up = vec4.fromValues(0, 1, 0, 0);
-    vec4.transformMat4(this.up, this.up, this.modelViewMatrix);
+    const newRight = vec4.fromValues(1, 0, 0, 0);
+    const newUp = vec4.fromValues(0, 1, 0, 0);
+    const newForward = vec4.fromValues(0, 0, 1, 0);
 
-    this.forward = vec4.fromValues(0, 0, 1, 0);
-    vec4.transformMat4(this.forward, this.forward, this.modelViewMatrix);
+    vec4.transformMat4(right, newRight, modelViewMatrix);
+    vec4.transformMat4(up, newUp, modelViewMatrix);
+    vec4.transformMat4(forward, newForward, modelViewMatrix);
 
-    return [this.right, this.up, this.forward];
+    return [right, up, forward];
   }
 }
