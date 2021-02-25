@@ -2,13 +2,25 @@ import GL from "../GL";
 import { VaoOptions_TYPE } from "../Types";
 
 export default class Quad {
-  static createQuadVaoData(gl: GL, name = "quad", size = 0.5): VaoOptions_TYPE {
+  static createQuadVaoData(gl: GL, name = "quad", size = 1): VaoOptions_TYPE {
+    console.log(`Preparing ${name} VAO data...`);
+
+    const halfSize = size / 2;
+
     // prettier-ignore
     const positionArray = [
-      -size,  size, 0,
-      -size, -size, 0,
-       size, -size, 0,
-       size,  size, 0,
+      -halfSize,  halfSize, 0,
+      -halfSize, -halfSize, 0,
+       halfSize, -halfSize, 0,
+       halfSize,  halfSize, 0,
+    ];
+
+    // prettier-ignore
+    const normalArray = [
+      0, 0, 1,
+      0, 0, 1,
+      0, 0, 1,
+      0, 0, 1
     ];
 
     // prettier-ignore
@@ -37,6 +49,7 @@ export default class Quad {
       name,
       drawMode: gl.TRIANGLES,
       positionArray,
+      normalArray,
       colorArray,
       uvArray,
       indexArray,

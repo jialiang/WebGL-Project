@@ -53,18 +53,19 @@ class CameraTransform extends Transform {
     const { mode, modelViewMatrix, viewMatrix, position, rotation } = this;
     const { toRadian } = CameraTransform;
 
+    // Order important!
     switch (mode) {
       case "orbit":
         mat4.identity(modelViewMatrix);
-        mat4.rotateX(modelViewMatrix, modelViewMatrix, toRadian(rotation[0]));
         mat4.rotateY(modelViewMatrix, modelViewMatrix, toRadian(rotation[1]));
+        mat4.rotateX(modelViewMatrix, modelViewMatrix, toRadian(rotation[0]));
         mat4.translate(modelViewMatrix, modelViewMatrix, position);
         break;
       case "free":
         mat4.identity(modelViewMatrix);
         mat4.translate(modelViewMatrix, modelViewMatrix, position);
-        mat4.rotateX(modelViewMatrix, modelViewMatrix, toRadian(rotation[0]));
         mat4.rotateY(modelViewMatrix, modelViewMatrix, toRadian(rotation[1]));
+        mat4.rotateX(modelViewMatrix, modelViewMatrix, toRadian(rotation[0]));
         break;
       default:
         break;
@@ -185,7 +186,7 @@ export class CameraController {
     const clampedDelta = Math.max(-1, Math.min(1, deltaY));
     const normalizedDelta = clampedDelta * effectiveZoomRate;
 
-    camera.transformation.panZ(normalizedDelta);
+    camera.transformation.panXYZ(0, 0, normalizedDelta);
   }
 
   handleMouseMove(e: MouseEvent): void {
@@ -205,8 +206,8 @@ export class CameraController {
     if (shiftKey || rotateOn) {
       camera.transformation.setTransformation({
         rotation: [
-          delta.y * effectiveRotateRate.y,
-          delta.x * effectiveRotateRate.x,
+          -delta.y * effectiveRotateRate.y,
+          -delta.x * effectiveRotateRate.x,
           0,
         ],
       });

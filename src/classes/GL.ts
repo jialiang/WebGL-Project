@@ -1,5 +1,5 @@
 import { ATTRIBUTES } from "./Globals";
-import { Model_TYPE, VaoOptions_TYPE } from "./Types";
+import { imageDictionary_TYPE, Model_TYPE, VaoOptions_TYPE } from "./Types";
 import Transform from "./Transform";
 
 class WebGL2RenderingContextConstructor {
@@ -179,6 +179,7 @@ export default class GL extends WebGL2RenderingContext {
       indexBuffer: this.createArrayBuffer({ value: indexArray, isIndex: true }),
       colorBuffer: this.createArrayBuffer({ value: colorArray, ...colorInfo }),
       transformation: new Transform(),
+      textures: [],
     };
 
     this.bindVertexArray(null);
@@ -258,5 +259,103 @@ export default class GL extends WebGL2RenderingContext {
     this.pixelStorei(this.UNPACK_FLIP_Y_WEBGL, false);
 
     return this.textureList;
+  };
+
+  loadTextures = async (
+    imageDictionary: imageDictionary_TYPE[]
+  ): Promise<void> =>
+    Promise.all(
+      imageDictionary.map((imageInfo) =>
+        this.getImageFromUrl(imageInfo.url).then((imageSource) =>
+          this.loadTexture(imageInfo.name, imageSource)
+        )
+      )
+    )
+      .then(() => {
+        console.log("Success loading all textures.");
+      })
+      .catch((e) => {
+        console.warn(e);
+      });
+
+  loadCubeMap = async (
+    name = "cubeMap",
+    basePath: string
+  ): Promise<WebGLTexture | null> => {
+    console.log(`Creating texture for cube map ${name}...`);
+
+    // order important: right, left, top, bottom, back, front
+    const suffixes = ["ft", "bk", "up", "dn", "rt", "lf"];
+    const pathToImages = suffixes.map((suffix) => `${basePath}_${suffix}.png`);
+
+    return Promise.all(
+      pathToImages.map((pathname) => this.getImageFromUrl(pathname))
+    )
+      .then((images) => {
+        console.log(`Success loading all images for cube map ${name}.`);
+
+        const texture = this.createTexture();
+
+        if (!texture) throw `Failed to initialize WebGL Texture`;
+
+        this.bindTexture(this.TEXTURE_CUBE_MAP, texture);
+
+        images.forEach((image, index) => {
+          this.texImage2D(
+            this.TEXTURE_CUBE_MAP_POSITIVE_X + index,
+            0,
+            this.RGBA,
+            this.RGBA,
+            this.UNSIGNED_BYTE,
+            image
+          );
+        });
+
+        //Setup up scaling
+        this.texParameteri(
+          this.TEXTURE_CUBE_MAP,
+          this.TEXTURE_MAG_FILTER,
+          this.LINEAR
+        );
+
+        //Setup down scaling
+        this.texParameteri(
+          this.TEXTURE_CUBE_MAP,
+          this.TEXTURE_MIN_FILTER,
+          this.LINEAR
+        );
+
+        //Stretch image to X position
+        this.texParameteri(
+          this.TEXTURE_CUBE_MAP,
+          this.TEXTURE_WRAP_S,
+          this.CLAMP_TO_EDGE
+        );
+
+        //Stretch image to Y position
+        this.texParameteri(
+          this.TEXTURE_CUBE_MAP,
+          this.TEXTURE_WRAP_T,
+          this.CLAMP_TO_EDGE
+        );
+
+        //Stretch image to Z position
+        this.texParameteri(
+          this.TEXTURE_CUBE_MAP,
+          this.TEXTURE_WRAP_R,
+          this.CLAMP_TO_EDGE
+        );
+
+        this.generateMipmap(this.TEXTURE_CUBE_MAP);
+
+        this.bindTexture(this.TEXTURE_CUBE_MAP, null);
+        this.textureList[name] = texture;
+
+        return texture;
+      })
+      .catch((e) => {
+        console.warn(`Error creating textures for cube map ${name}:\n${e}`);
+        return null;
+      });
   };
 }

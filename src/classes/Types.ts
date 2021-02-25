@@ -1,5 +1,6 @@
 import { mat4, mat3 } from "gl-matrix";
 import Transform from "./Transform";
+import { TEXTURE_TYPE_TO_SLOT } from "./Globals";
 
 export type UniformList_TYPE = {
   name: string;
@@ -23,9 +24,9 @@ export type VaoOptions_TYPE = {
   drawMode: GLenum;
   positionArray: number[];
 
-  normalArray?: number[];
-  uvArray?: number[];
-  colorArray?: number[];
+  normalArray: number[];
+  uvArray: number[];
+  colorArray: number[];
   indexArray?: number[];
 };
 
@@ -45,7 +46,17 @@ export type Model_TYPE = {
   indexBuffer: WebGLBuffer;
 
   transformation: Transform;
-  texture?: WebGLTexture;
+  textures: TextureInfo_TYPE[];
+};
+
+export type TextureInfo_TYPE = {
+  type: keyof typeof TEXTURE_TYPE_TO_SLOT;
+  texture: WebGLTexture;
+};
+
+export type imageDictionary_TYPE = {
+  name: string;
+  url: string;
 };
 
 export class XY {

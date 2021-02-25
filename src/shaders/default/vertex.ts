@@ -15,6 +15,6 @@ out vec2 uv;
 void main(void) {
     color = a_color;
     uv = a_uv;
-    gl_Position = u_ProjectionMatrix * u_ViewMatrix * u_ModelViewMatrix * vec4(a_position, 1.0);
+    gl_Position = u_ProjectionMatrix * u_ViewMatrix * u_ModelViewMatrix * vec4(a_position.xyz, 1.0);
 }
 `;

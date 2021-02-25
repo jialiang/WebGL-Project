@@ -20,3 +20,20 @@ export const ATTRIBUTES = {
     componentLength: 4,
   },
 };
+
+export const TEXTURE_TYPE_TO_SLOT = {
+  diffuse: 0,
+  cubemap: 0,
+  normal: 1,
+  bump: 1,
+  displacement: 2,
+  specularity: 3,
+  reflection: 3,
+  gloss: 4,
+  roughness: 4,
+};
+
+export default {
+  ATTRIBUTES,
+  TEXTURE_TYPE_TO_SLOT,
+};

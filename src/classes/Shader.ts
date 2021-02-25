@@ -1,7 +1,8 @@
 import GL from "./GL";
-import { UniformList_TYPE, Model_TYPE } from "./Types";
+import { UniformList_TYPE, Model_TYPE, TextureInfo_TYPE } from "./Types";
 import ShaderUtil from "./ShaderUtil";
 import { Camera } from "./Camera";
+import { TEXTURE_TYPE_TO_SLOT } from "./Globals";
 
 export default class Shader {
   gl: GL;
@@ -12,9 +13,10 @@ export default class Shader {
     gl: GL,
     vertexShaderSrc: string,
     fragmentShaderSrc: string,
-
     uniformList?: UniformList_TYPE[]
   ) {
+    this.logInitialization();
+
     const vertexShader = ShaderUtil.createShader(gl, vertexShaderSrc, "vertex");
     const fragmentShader = ShaderUtil.createShader(
       gl,
@@ -34,6 +36,10 @@ export default class Shader {
     if (uniformList) this.updateUniform(uniformList);
   }
 
+  logInitialization(): void {
+    console.log("Preparing default shader...");
+  }
+
   updateUniform(
     uniformList: UniformList_TYPE[],
     programActivated = false
@@ -50,7 +56,7 @@ export default class Shader {
       if (!location) {
         location = gl.getUniformLocation(program, name);
 
-        if (!location) {
+        if (location == null) {
           console.warn(`Failed to get location of uniform ${name}.`);
           return;
         }
@@ -95,19 +101,48 @@ export default class Shader {
     return true;
   }
 
+  pushTexturesToGpu(
+    textures: TextureInfo_TYPE[],
+    uniformList: UniformList_TYPE[]
+  ): void {
+    const { gl } = this;
+
+    textures.forEach((textureInfo) => {
+      const { type, texture } = textureInfo;
+
+      const slotNumber = TEXTURE_TYPE_TO_SLOT[type];
+      const slotName = `TEXTURE${slotNumber}` as keyof GL;
+      const slot = gl[slotName] as GLenum;
+
+      if (slot == null) return;
+
+      gl.activeTexture(slot);
+      gl.bindTexture(gl.TEXTURE_2D, texture);
+
+      uniformList.push({
+        name: `u_${type}Texture`,
+        value: [slotNumber],
+        type: "uniform1i",
+      });
+    });
+
+    uniformList.push({
+      name: "u_hasTexture",
+      value: [textures.length ? 1 : 0],
+      type: "uniform1f",
+    });
+  }
+
   renderModel(model: Model_TYPE, camera: Camera): Shader {
-    const { gl, program } = this;
+    const { gl } = this;
     const {
       vao,
       indexCount,
       vertexCount,
       drawMode,
       transformation,
-      texture,
+      textures,
     } = model;
-
-    if (gl.getParameter(gl.CURRENT_PROGRAM) !== program) this.activate();
-
     const uniformList: UniformList_TYPE[] = [
       {
         name: "u_ModelViewMatrix",
@@ -126,22 +161,7 @@ export default class Shader {
       },
     ];
 
-    if (texture) {
-      gl.activeTexture(gl.TEXTURE0);
-      gl.bindTexture(gl.TEXTURE_2D, texture);
-
-      uniformList.push({
-        name: "u_Texture",
-        value: [0],
-        type: "uniform1i",
-      });
-    }
-
-    uniformList.push({
-      name: "u_hasTexture",
-      value: [texture ? 1 : 0],
-      type: "uniform1f",
-    });
+    this.pushTexturesToGpu(textures, uniformList);
 
     this.updateUniform(uniformList, true);
 
@@ -152,7 +172,45 @@ export default class Shader {
 
     gl.bindVertexArray(null);
     gl.bindTexture(gl.TEXTURE_2D, null);
+    gl.bindTexture(gl.TEXTURE_CUBE_MAP, null);
 
     return this;
+  }
+}
+
+export class CubemapShader extends Shader {
+  logInitialization(): void {
+    console.log("Preparing cubemap shader...");
+  }
+
+  pushTexturesToGpu(
+    textures: TextureInfo_TYPE[],
+    uniformList: UniformList_TYPE[]
+  ): void {
+    const { gl } = this;
+
+    textures.forEach((textureInfo, index) => {
+      const { type, texture } = textureInfo;
+
+      if (type !== "cubemap") return;
+
+      const slotName = `TEXTURE${index}` as keyof GL;
+      const slot = gl[slotName] as GLenum;
+
+      gl.activeTexture(slot);
+      gl.bindTexture(gl.TEXTURE_CUBE_MAP, texture);
+
+      uniformList.push({
+        name: `u_cubemapTexture_${index}`,
+        value: [index],
+        type: "uniform1i",
+      });
+    });
+
+    uniformList.push({
+      name: "u_Time",
+      value: [performance.now()],
+      type: "uniform1f",
+    });
   }
 }
