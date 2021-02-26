@@ -1,4 +1,5 @@
 import { mat4 } from "gl-matrix";
+import GL from "./GL";
 import Transform from "./Transform";
 import { XY } from "./Types";
 
@@ -90,10 +91,10 @@ export class Camera {
   projectionMatrix: mat4;
   mode: "free" | "orbit";
 
-  transformation: CameraTransform;
+  transform: CameraTransform;
 
   constructor(
-    gl: WebGL2RenderingContext,
+    gl: GL,
     fov = 45,
     near = 0.1,
     far = 100.0,
@@ -104,7 +105,7 @@ export class Camera {
     const aspectRatio = gl.canvas.width / gl.canvas.height;
 
     this.projectionMatrix = mat4.create();
-    this.transformation = new CameraTransform(mode);
+    this.transform = new CameraTransform(mode);
     this.mode = mode;
 
     mat4.perspective(this.projectionMatrix, fov, aspectRatio, near, far);
@@ -129,7 +130,7 @@ export class CameraController {
   initialPosition: XY;
   previousPosition: XY;
 
-  constructor(gl: WebGL2RenderingContext, camera: Camera) {
+  constructor(gl: GL, camera: Camera) {
     console.log("Binding functions to mouse/touch events...");
 
     this.canvas = gl.canvas as HTMLCanvasElement;
@@ -186,7 +187,7 @@ export class CameraController {
     const clampedDelta = Math.max(-1, Math.min(1, deltaY));
     const normalizedDelta = clampedDelta * effectiveZoomRate;
 
-    camera.transformation.panXYZ(0, 0, normalizedDelta);
+    camera.transform.panXYZ(0, 0, normalizedDelta);
   }
 
   handleMouseMove(e: MouseEvent): void {
@@ -204,7 +205,7 @@ export class CameraController {
     const delta = currentPosition.do("-", previousPosition);
 
     if (shiftKey || rotateOn) {
-      camera.transformation.setTransformation({
+      camera.transform.setTransformation({
         rotation: [
           -delta.y * effectiveRotateRate.y,
           -delta.x * effectiveRotateRate.x,
@@ -212,7 +213,7 @@ export class CameraController {
         ],
       });
     } else {
-      camera.transformation.panXYZ(
+      camera.transform.panXYZ(
         -delta.x * effectivePanRate.x,
         delta.y * effectivePanRate.y,
         0

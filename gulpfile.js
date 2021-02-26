@@ -1,6 +1,7 @@
 "use strict";
 
 const { src, dest, task, watch } = require("gulp");
+const beeper = require("beeper");
 const browserify = require("browserify");
 const exorcist = require("exorcist");
 const fancyLog = require("fancy-log");
@@ -36,7 +37,8 @@ const buildJS = () =>
     .pipe(minifyStream())
     .pipe(exorcist("./dist/bundle.js.map"))
     .pipe(source("bundle.js"))
-    .pipe(dest("dist"));
+    .pipe(dest("dist"))
+    .on("end", beeper);
 
 task("default", () => {
   watch(

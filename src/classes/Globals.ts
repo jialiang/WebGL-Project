@@ -21,6 +21,13 @@ export const ATTRIBUTES = {
   },
 };
 
+export const IMAGE_DICTIONARY = [
+  {
+    name: "pirate",
+    url: "models/pirate-girl/pirate-girl.png",
+  },
+];
+
 export const TEXTURE_TYPE_TO_SLOT = {
   diffuse: 0,
   cubemap: 0,
@@ -35,5 +42,6 @@ export const TEXTURE_TYPE_TO_SLOT = {
 
 export default {
   ATTRIBUTES,
+  IMAGE_DICTIONARY,
   TEXTURE_TYPE_TO_SLOT,
 };

@@ -1,24 +1,25 @@
 export default class RenderLoop {
   isActive: boolean;
-  onRender: (arg0: number) => void;
+  onRender: (speed: number) => void;
   onBeforeRender?: () => void;
-  fps: number;
 
   constructor(onRender: () => void, onBeforeRender?: () => void) {
     this.isActive = false;
     this.onRender = onRender;
     this.onBeforeRender = onBeforeRender;
-    this.fps = 0;
   }
 
   run(previousTime: number): void {
     const currentTime = performance.now();
     const deltaTime = currentTime - previousTime;
+    const animationSpeedFactor = deltaTime / (1000 / 60);
 
-    this.fps = Math.floor(1 / deltaTime);
-    this.onRender(deltaTime);
+    this.onRender(animationSpeedFactor);
 
-    if (this.isActive) requestAnimationFrame(this.run.bind(this));
+    if (this.isActive)
+      requestAnimationFrame(() => {
+        this.run(currentTime);
+      });
   }
 
   start(): RenderLoop {
@@ -28,7 +29,9 @@ export default class RenderLoop {
 
     if (typeof this.onBeforeRender === "function") this.onBeforeRender();
 
-    requestAnimationFrame(this.run.bind(this));
+    requestAnimationFrame(() => {
+      this.run(performance.now());
+    });
     console.log("Render loop started");
 
     return this;

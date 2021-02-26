@@ -1,8 +1,10 @@
 import GL from "./GL";
-import { UniformList_TYPE, Model_TYPE, TextureInfo_TYPE } from "./Types";
 import ShaderUtil from "./ShaderUtil";
-import { Camera } from "./Camera";
+
 import { TEXTURE_TYPE_TO_SLOT } from "./Globals";
+import { UniformList_TYPE, Model_TYPE, TextureInfo_TYPE } from "./Types";
+import { Camera } from "./Camera";
+import Light from "./Light";
 
 export default class Shader {
   gl: GL;
@@ -33,51 +35,11 @@ export default class Shader {
     );
     this.uniformLocations = {};
 
-    if (uniformList) this.updateUniform(uniformList);
+    if (uniformList) this.pushUniformsToGpu(uniformList);
   }
 
   logInitialization(): void {
     console.log("Preparing default shader...");
-  }
-
-  updateUniform(
-    uniformList: UniformList_TYPE[],
-    programActivated = false
-  ): Shader {
-    const { gl, program } = this;
-
-    if (!programActivated) this.activate();
-
-    uniformList.forEach((uniform) => {
-      const { name, value, type } = uniform;
-
-      let location: WebGLUniformLocation | null = this.uniformLocations[name];
-
-      if (!location) {
-        location = gl.getUniformLocation(program, name);
-
-        if (location == null) {
-          console.warn(`Failed to get location of uniform ${name}.`);
-          return;
-        }
-
-        this.uniformLocations[name] = location;
-      }
-
-      switch (type) {
-        case "uniformMatrix2fv":
-        case "uniformMatrix3fv":
-        case "uniformMatrix4fv":
-          gl[type](location, false, value);
-          break;
-        default:
-          gl[type](location, value[0], value[1], value[2], value[3]);
-      }
-    });
-
-    if (!programActivated) this.deactivate();
-
-    return this;
   }
 
   activate(): Shader {
@@ -99,6 +61,55 @@ export default class Shader {
     }
 
     return true;
+  }
+
+  pushUniformsToGpu(
+    uniformList: UniformList_TYPE[],
+    programActivated = false
+  ): Shader {
+    const { gl, program } = this;
+
+    if (!programActivated) this.activate();
+
+    uniformList.forEach((uniform) => {
+      const { name, value, type } = uniform;
+
+      let location: WebGLUniformLocation | null = this.uniformLocations[name];
+
+      if (location === "INVALID") return;
+
+      if (!location) {
+        location = gl.getUniformLocation(program, name);
+
+        if (location == null) {
+          console.warn(`Failed to get location of uniform ${name}.`);
+          this.uniformLocations[name] = "INVALID";
+          return;
+        }
+
+        this.uniformLocations[name] = location;
+      }
+
+      switch (type) {
+        case "uniformMatrix2fv":
+        case "uniformMatrix3fv":
+        case "uniformMatrix4fv":
+          gl[type](location, false, value);
+          break;
+        case "uniform1fv":
+        case "uniform2fv":
+        case "uniform3fv":
+        case "uniform4fv":
+          gl[type](location, value);
+          break;
+        default:
+          gl[type](location, value[0], value[1], value[2], value[3]);
+      }
+    });
+
+    if (!programActivated) this.deactivate();
+
+    return this;
   }
 
   pushTexturesToGpu(
@@ -133,22 +144,11 @@ export default class Shader {
     });
   }
 
-  renderModel(model: Model_TYPE, camera: Camera): Shader {
-    const { gl } = this;
-    const {
-      vao,
-      indexCount,
-      vertexCount,
-      drawMode,
-      transformation,
-      textures,
-    } = model;
-    const uniformList: UniformList_TYPE[] = [
-      {
-        name: "u_ModelViewMatrix",
-        value: transformation.modelViewMatrix,
-        type: "uniformMatrix4fv",
-      },
+  populateCameraUniforms(
+    camera: Camera,
+    uniformList: UniformList_TYPE[]
+  ): void {
+    uniformList.push.apply(uniformList, [
       {
         name: "u_ProjectionMatrix",
         value: camera.projectionMatrix,
@@ -156,14 +156,56 @@ export default class Shader {
       },
       {
         name: "u_ViewMatrix",
-        value: camera.transformation.viewMatrix,
+        value: camera.transform.viewMatrix,
         type: "uniformMatrix4fv",
+      },
+      {
+        name: "u_CameraPosition",
+        value: camera.transform.position,
+        type: "uniform3fv",
+      },
+    ]);
+  }
+
+  populateLightUniforms(light: Light, uniformList: UniformList_TYPE[]): void {
+    uniformList.push.apply(uniformList, [
+      {
+        name: "u_LightPosition",
+        value: light.transform.position,
+        type: "uniform3fv",
+      },
+    ]);
+  }
+
+  renderModel(model: Model_TYPE, camera?: Camera, light?: Light): Shader {
+    const { gl } = this;
+    const {
+      vao,
+      indexCount,
+      vertexCount,
+      drawMode,
+      transform,
+      textures,
+    } = model;
+
+    const uniformList: UniformList_TYPE[] = [
+      {
+        name: "u_ModelViewMatrix",
+        value: transform.modelViewMatrix,
+        type: "uniformMatrix4fv",
+      },
+      {
+        name: "u_NormalMatrix",
+        value: transform.normalMatrix,
+        type: "uniformMatrix3fv",
       },
     ];
 
-    this.pushTexturesToGpu(textures, uniformList);
+    if (camera) this.populateCameraUniforms(camera, uniformList);
+    if (light) this.populateLightUniforms(light, uniformList);
 
-    this.updateUniform(uniformList, true);
+    this.pushTexturesToGpu(textures, uniformList);
+    this.pushUniformsToGpu(uniformList, true);
 
     gl.bindVertexArray(vao);
 

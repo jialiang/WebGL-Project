@@ -16,17 +16,21 @@ export type UniformList_TYPE = {
     | "uniform4i"
     | "uniformMatrix2fv"
     | "uniformMatrix3fv"
-    | "uniformMatrix4fv";
+    | "uniformMatrix4fv"
+    | "uniform1fv"
+    | "uniform2fv"
+    | "uniform3fv"
+    | "uniform4fv";
 };
 
 export type VaoOptions_TYPE = {
   name: string;
   drawMode: GLenum;
   positionArray: number[];
-
   normalArray: number[];
   uvArray: number[];
   colorArray: number[];
+
   indexArray?: number[];
 };
 
@@ -45,7 +49,7 @@ export type Model_TYPE = {
 
   indexBuffer: WebGLBuffer;
 
-  transformation: Transform;
+  transform: Transform;
   textures: TextureInfo_TYPE[];
 };
 

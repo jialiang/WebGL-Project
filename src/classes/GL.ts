@@ -178,7 +178,7 @@ export default class GL extends WebGL2RenderingContext {
       uvBuffer: this.createArrayBuffer({ value: uvArray, ...uvInfo }),
       indexBuffer: this.createArrayBuffer({ value: indexArray, isIndex: true }),
       colorBuffer: this.createArrayBuffer({ value: colorArray, ...colorInfo }),
-      transformation: new Transform(),
+      transform: new Transform(),
       textures: [],
     };
 
