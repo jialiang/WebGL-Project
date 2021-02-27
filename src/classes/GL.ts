@@ -1,5 +1,5 @@
-import { ATTRIBUTES } from "./Globals";
-import { imageDictionary_TYPE, Model_TYPE, VaoOptions_TYPE } from "./Types";
+import { ATTRIBUTES, TEXTURE_TYPE_COUNT } from "./Globals";
+import { ImageDictionary_TYPE, Model_TYPE, VaoOptions_TYPE } from "./Types";
 import Transform from "./Transform";
 
 class WebGL2RenderingContextConstructor {
@@ -24,7 +24,16 @@ WebGL2RenderingContext = Object.setPrototypeOf(
   WebGL2RenderingContext.prototype
 );
 
+declare global {
+  interface Window {
+    GL: GL;
+  }
+}
+
 export default class GL extends WebGL2RenderingContext {
+  imageList: Record<string, HTMLImageElement> = {};
+  videoList: Record<string, HTMLVideoElement> = {};
+
   modelList: Record<string, Model_TYPE> = {};
   textureList: Record<string, WebGLTexture> = {};
 
@@ -49,11 +58,14 @@ export default class GL extends WebGL2RenderingContext {
     this.setSize(width, height);
     this.clearCanvas();
 
+    window.GL = this;
+
     return this;
   }
 
+  getImage = (name = ""): HTMLImageElement | undefined => this.imageList[name];
+  getVideo = (name = ""): HTMLVideoElement | undefined => this.videoList[name];
   getModel = (name = ""): Model_TYPE | undefined => this.modelList[name];
-
   getTexture = (name = ""): WebGLTexture | undefined => this.textureList[name];
 
   clearCanvas = (): GL => {
@@ -179,7 +191,7 @@ export default class GL extends WebGL2RenderingContext {
       indexBuffer: this.createArrayBuffer({ value: indexArray, isIndex: true }),
       colorBuffer: this.createArrayBuffer({ value: colorArray, ...colorInfo }),
       transform: new Transform(),
-      textures: [],
+      textures: new Array(TEXTURE_TYPE_COUNT).fill(null),
     };
 
     this.bindVertexArray(null);
@@ -190,9 +202,14 @@ export default class GL extends WebGL2RenderingContext {
     return obj;
   };
 
-  getImageFromUrl = async (url: string): Promise<TexImageSource> =>
-    new Promise<TexImageSource>((resolve, reject) => {
+  getImageFromUrl = async (
+    name: string,
+    url: string
+  ): Promise<TexImageSource> => {
+    return new Promise((resolve, reject) => {
       console.log(`Loading image from ${url}`);
+
+      if (this.imageList[url]) resolve(this.imageList[url]);
 
       const img = document.createElement("img");
       const startTime = performance.now();
@@ -202,6 +219,11 @@ export default class GL extends WebGL2RenderingContext {
         const elapsed = ((endTime - startTime) / 1000).toFixed(2);
 
         console.log(`Image ${url} loaded after ${elapsed} seconds.`);
+
+        if (this.imageList[name]) delete this.imageList[name];
+
+        this.imageList[name] = img;
+
         resolve(img);
       };
 
@@ -209,16 +231,87 @@ export default class GL extends WebGL2RenderingContext {
         reject(`Error loading image from ${url}.`);
       };
 
-      img.crossOrigin = "anonymouse";
+      img.crossOrigin = "anonymous";
       img.src = url;
     });
+  };
+
+  getVideoFromUrl = async (
+    name: string,
+    url: string
+  ): Promise<TexImageSource> => {
+    return new Promise((resolve, reject) => {
+      console.log(`Loading video from ${url}`);
+
+      if (this.videoList[url]) resolve(this.videoList[url]);
+
+      const video = document.createElement("video");
+      const startTime = performance.now();
+
+      video.onloadeddata = () => {
+        const endTime = performance.now();
+        const elapsed = ((endTime - startTime) / 1000).toFixed(2);
+
+        console.log(
+          `Loaded enough of video ${url} to play after ${elapsed} seconds.`
+        );
+
+        if (this.videoList[name]) delete this.videoList[name];
+
+        this.videoList[name] = video;
+
+        resolve(video);
+      };
+
+      video.onabort = video.onerror = () => {
+        reject(`Error loading video from ${url}.`);
+      };
+
+      video.crossOrigin = "anonymous";
+      video.src = url;
+      // video.loop = true;
+      // video.volume = 0;
+
+      video.load();
+    });
+  };
+
+  startPlayingVideo = (url?: string): void => {
+    const { videoList } = this;
+
+    if (url) {
+      if (videoList[url]) videoList[url].play();
+      return;
+    }
+
+    Object.keys(videoList).forEach((video) => videoList[video].play());
+  };
+
+  updateVideoTexture = (name?: string): void => {
+    const { videoList } = this;
+
+    if (name && videoList[name]) {
+      if (!videoList[name].paused) {
+        this.loadTexture(name, videoList[name], false, true);
+      }
+      return;
+    }
+
+    Object.keys(videoList).forEach((name) => {
+      if (!videoList[name].paused) {
+        this.loadTexture(name, videoList[name], false, true);
+      }
+    });
+  };
 
   loadTexture = (
-    name = "default",
+    name: string,
     image: TexImageSource,
+    generateMipmaps = true,
+    silent = false,
     flipY = false
   ): WebGLTexture => {
-    console.log(`Creating texture ${name}...`);
+    if (!silent) console.log(`Creating texture ${name}...`);
 
     const texture = this.createTexture();
 
@@ -246,30 +339,45 @@ export default class GL extends WebGL2RenderingContext {
     this.texParameteri(
       this.TEXTURE_2D,
       this.TEXTURE_MIN_FILTER,
-      this.LINEAR_MIPMAP_NEAREST
+      generateMipmaps ? this.LINEAR_MIPMAP_NEAREST : this.LINEAR
     );
 
     // Precalculate different sizes of texture for better quality rendering.
-    this.generateMipmap(this.TEXTURE_2D);
+    if (generateMipmaps) this.generateMipmap(this.TEXTURE_2D);
 
     this.bindTexture(this.TEXTURE_2D, null);
+
+    if (this.textureList[name]) {
+      this.deleteTexture(this.textureList[name]);
+      delete this.textureList[name];
+    }
 
     this.textureList[name] = texture;
 
     this.pixelStorei(this.UNPACK_FLIP_Y_WEBGL, false);
 
-    return this.textureList;
+    return texture;
   };
 
   loadTextures = async (
-    imageDictionary: imageDictionary_TYPE[]
-  ): Promise<void> =>
-    Promise.all(
-      imageDictionary.map((imageInfo) =>
-        this.getImageFromUrl(imageInfo.url).then((imageSource) =>
-          this.loadTexture(imageInfo.name, imageSource)
-        )
-      )
+    imageDictionary: ImageDictionary_TYPE[]
+  ): Promise<void> => {
+    return Promise.all(
+      imageDictionary.map(async (imageInfo) => {
+        const { name, type, url } = imageInfo;
+        let source;
+
+        if (type === "image") {
+          source = await this.getImageFromUrl(name, url);
+        }
+        if (type === "video") {
+          source = await this.getVideoFromUrl(name, url);
+        }
+
+        if (!source) return;
+
+        this.loadTexture(name, source, type === "image");
+      })
     )
       .then(() => {
         console.log("Success loading all textures.");
@@ -277,6 +385,7 @@ export default class GL extends WebGL2RenderingContext {
       .catch((e) => {
         console.warn(e);
       });
+  };
 
   loadCubeMap = async (
     name = "cubeMap",
@@ -286,10 +395,12 @@ export default class GL extends WebGL2RenderingContext {
 
     // order important: right, left, top, bottom, back, front
     const suffixes = ["ft", "bk", "up", "dn", "rt", "lf"];
-    const pathToImages = suffixes.map((suffix) => `${basePath}_${suffix}.png`);
 
     return Promise.all(
-      pathToImages.map((pathname) => this.getImageFromUrl(pathname))
+      suffixes.map((suffix) => {
+        const pathToImage = `${basePath}_${suffix}.png`;
+        return this.getImageFromUrl(`${name}_${suffix}`, pathToImage);
+      })
     )
       .then((images) => {
         console.log(`Success loading all images for cube map ${name}.`);

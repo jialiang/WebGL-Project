@@ -1,8 +1,8 @@
 import GL from "./GL";
 import ShaderUtil from "./ShaderUtil";
 
-import { TEXTURE_TYPE_TO_SLOT } from "./Globals";
-import { UniformList_TYPE, Model_TYPE, TextureInfo_TYPE } from "./Types";
+import { SLOT_TO_TEXTURE_TYPE } from "./Globals";
+import { UniformList_TYPE, Model_TYPE } from "./Types";
 import { Camera } from "./Camera";
 import Light from "./Light";
 
@@ -113,16 +113,15 @@ export default class Shader {
   }
 
   pushTexturesToGpu(
-    textures: TextureInfo_TYPE[],
+    textures: (WebGLTexture | null)[],
     uniformList: UniformList_TYPE[]
   ): void {
     const { gl } = this;
 
-    textures.forEach((textureInfo) => {
-      const { type, texture } = textureInfo;
+    textures.forEach((texture, index) => {
+      if (texture == null) return;
 
-      const slotNumber = TEXTURE_TYPE_TO_SLOT[type];
-      const slotName = `TEXTURE${slotNumber}` as keyof GL;
+      const slotName = `TEXTURE${index}` as keyof GL;
       const slot = gl[slotName] as GLenum;
 
       if (slot == null) return;
@@ -131,8 +130,8 @@ export default class Shader {
       gl.bindTexture(gl.TEXTURE_2D, texture);
 
       uniformList.push({
-        name: `u_${type}Texture`,
-        value: [slotNumber],
+        name: `u_${SLOT_TO_TEXTURE_TYPE[index]}Texture`,
+        value: [index],
         type: "uniform1i",
       });
     });
@@ -145,8 +144,8 @@ export default class Shader {
   }
 
   populateCameraUniforms(
-    camera: Camera,
-    uniformList: UniformList_TYPE[]
+    uniformList: UniformList_TYPE[],
+    camera: Camera
   ): void {
     uniformList.push.apply(uniformList, [
       {
@@ -167,12 +166,37 @@ export default class Shader {
     ]);
   }
 
-  populateLightUniforms(light: Light, uniformList: UniformList_TYPE[]): void {
+  populateLightUniforms(uniformList: UniformList_TYPE[], light: Light): void {
     uniformList.push.apply(uniformList, [
       {
         name: "u_LightPosition",
         value: light.transform.position,
         type: "uniform3fv",
+      },
+      {
+        name: "u_LightColor",
+        value: light.color,
+        type: "uniform3fv",
+      },
+      {
+        name: "u_AmbientStrength",
+        value: [light.ambientStrength],
+        type: "uniform1f",
+      },
+      {
+        name: "u_DiffuseStrength",
+        value: [light.diffuseStrength],
+        type: "uniform1f",
+      },
+      {
+        name: "u_SpecularStrength",
+        value: [light.specularStrength],
+        type: "uniform1f",
+      },
+      {
+        name: "u_SpecularShininess",
+        value: [light.specularShininess],
+        type: "uniform1f",
       },
     ]);
   }
@@ -201,8 +225,8 @@ export default class Shader {
       },
     ];
 
-    if (camera) this.populateCameraUniforms(camera, uniformList);
-    if (light) this.populateLightUniforms(light, uniformList);
+    if (camera) this.populateCameraUniforms(uniformList, camera);
+    if (light) this.populateLightUniforms(uniformList, light);
 
     this.pushTexturesToGpu(textures, uniformList);
     this.pushUniformsToGpu(uniformList, true);
@@ -226,15 +250,13 @@ export class CubemapShader extends Shader {
   }
 
   pushTexturesToGpu(
-    textures: TextureInfo_TYPE[],
+    textures: (WebGLTexture | null)[],
     uniformList: UniformList_TYPE[]
   ): void {
     const { gl } = this;
 
-    textures.forEach((textureInfo, index) => {
-      const { type, texture } = textureInfo;
-
-      if (type !== "cubemap") return;
+    textures.forEach((texture, index) => {
+      if (texture == null) return;
 
       const slotName = `TEXTURE${index}` as keyof GL;
       const slot = gl[slotName] as GLenum;
@@ -243,7 +265,7 @@ export class CubemapShader extends Shader {
       gl.bindTexture(gl.TEXTURE_CUBE_MAP, texture);
 
       uniformList.push({
-        name: `u_cubemapTexture_${index}`,
+        name: `u_CubemapTexture_${index}`,
         value: [index],
         type: "uniform1i",
       });

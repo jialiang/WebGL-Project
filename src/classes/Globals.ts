@@ -1,3 +1,5 @@
+import { ImageDictionary_TYPE } from "./Types";
+
 export const ATTRIBUTES = {
   position: {
     name: "a_position",
@@ -21,27 +23,34 @@ export const ATTRIBUTES = {
   },
 };
 
-export const IMAGE_DICTIONARY = [
+export const IMAGE_DICTIONARY: ImageDictionary_TYPE[] = [
   {
     name: "pirate",
+    type: "image",
     url: "models/pirate-girl/pirate-girl.png",
+  },
+  {
+    name: "hyperdimension",
+    type: "video",
+    url:
+      "videos/Superdimension Neptune VS Sega Hard Girls - Opening Movie (Official).mp4",
   },
 ];
 
+export const TEXTURE_TYPE_COUNT = 5;
+
 export const TEXTURE_TYPE_TO_SLOT = {
   diffuse: 0,
-  cubemap: 0,
-  normal: 1,
   bump: 1,
   displacement: 2,
   specularity: 3,
-  reflection: 3,
-  gloss: 4,
   roughness: 4,
 };
 
-export default {
-  ATTRIBUTES,
-  IMAGE_DICTIONARY,
-  TEXTURE_TYPE_TO_SLOT,
-};
+export const SLOT_TO_TEXTURE_TYPE = [
+  "Diffuse",
+  "Bump",
+  "Displacement",
+  "Specularity",
+  "Roughness",
+];

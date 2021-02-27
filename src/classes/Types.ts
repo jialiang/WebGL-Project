@@ -1,6 +1,5 @@
 import { mat4, mat3 } from "gl-matrix";
 import Transform from "./Transform";
-import { TEXTURE_TYPE_TO_SLOT } from "./Globals";
 
 export type UniformList_TYPE = {
   name: string;
@@ -50,16 +49,28 @@ export type Model_TYPE = {
   indexBuffer: WebGLBuffer;
 
   transform: Transform;
-  textures: TextureInfo_TYPE[];
+  textures: (WebGLTexture | null)[];
 };
 
-export type TextureInfo_TYPE = {
-  type: keyof typeof TEXTURE_TYPE_TO_SLOT;
-  texture: WebGLTexture;
+export type LightOptions_TYPE = {
+  color?: [number, number, number];
+  position?: [number, number, number];
+  ambientStrength?: number;
+  diffuseStrength?: number;
+  specularStrength?: number;
+  specularShininess?: number;
 };
 
-export type imageDictionary_TYPE = {
+export type RotatingLightOptions_TYPE = {
+  initialAngle?: number;
+  initialHeight?: number;
+  rotateSpeed?: number;
+  verticalSpeed?: number;
+};
+
+export type ImageDictionary_TYPE = {
   name: string;
+  type: "image" | "video";
   url: string;
 };
 
