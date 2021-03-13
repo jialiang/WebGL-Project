@@ -2,7 +2,7 @@ import GL from "./GL";
 import ShaderUtil from "./ShaderUtil";
 
 import { SLOT_TO_TEXTURE_TYPE } from "./Globals";
-import { UniformList_TYPE, Model_TYPE } from "./Types";
+import { UniformListItem_TYPE, Model_TYPE } from "./Types";
 import { Camera } from "./Camera";
 import Light from "./Light";
 
@@ -15,7 +15,7 @@ export default class Shader {
     gl: GL,
     vertexShaderSrc: string,
     fragmentShaderSrc: string,
-    uniformList?: UniformList_TYPE[]
+    uniformList?: UniformListItem_TYPE[]
   ) {
     this.logInitialization();
 
@@ -64,7 +64,7 @@ export default class Shader {
   }
 
   pushUniformsToGpu(
-    uniformList: UniformList_TYPE[],
+    uniformList: UniformListItem_TYPE[],
     programActivated = false
   ): Shader {
     const { gl, program } = this;
@@ -114,12 +114,15 @@ export default class Shader {
 
   pushTexturesToGpu(
     textures: (WebGLTexture | null)[],
-    uniformList: UniformList_TYPE[]
+    uniformList: UniformListItem_TYPE[]
   ): void {
     const { gl } = this;
+    let hasTexture = 0;
 
     textures.forEach((texture, index) => {
       if (texture == null) return;
+
+      hasTexture = 1;
 
       const slotName = `TEXTURE${index}` as keyof GL;
       const slot = gl[slotName] as GLenum;
@@ -138,13 +141,13 @@ export default class Shader {
 
     uniformList.push({
       name: "u_hasTexture",
-      value: [textures.length ? 1 : 0],
+      value: [hasTexture],
       type: "uniform1f",
     });
   }
 
   populateCameraUniforms(
-    uniformList: UniformList_TYPE[],
+    uniformList: UniformListItem_TYPE[],
     camera: Camera
   ): void {
     uniformList.push.apply(uniformList, [
@@ -166,7 +169,10 @@ export default class Shader {
     ]);
   }
 
-  populateLightUniforms(uniformList: UniformList_TYPE[], light: Light): void {
+  populateLightUniforms(
+    uniformList: UniformListItem_TYPE[],
+    light: Light
+  ): void {
     uniformList.push.apply(uniformList, [
       {
         name: "u_LightPosition",
@@ -212,7 +218,7 @@ export default class Shader {
       textures,
     } = model;
 
-    const uniformList: UniformList_TYPE[] = [
+    const uniformList: UniformListItem_TYPE[] = [
       {
         name: "u_ModelViewMatrix",
         value: transform.modelViewMatrix,
@@ -251,7 +257,7 @@ export class CubemapShader extends Shader {
 
   pushTexturesToGpu(
     textures: (WebGLTexture | null)[],
-    uniformList: UniformList_TYPE[]
+    uniformList: UniformListItem_TYPE[]
   ): void {
     const { gl } = this;
 

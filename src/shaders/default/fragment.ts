@@ -25,6 +25,8 @@ out vec4 finalColor;
 void main(void) {
     vec4 baseColor = u_hasTexture * texture(u_DiffuseTexture, uv) - (u_hasTexture - 1.0) * color;
 
+    // vec3 lowpolyNormal = normalize(cross(dFdx(position), dFdy(position)));
+
     vec3 lightDirection = normalize(u_LightPosition - position);
     vec3 cameraDirection = normalize(cameraPosition - position);
     vec3 reflectionDirection = reflect(-lightDirection, normal);

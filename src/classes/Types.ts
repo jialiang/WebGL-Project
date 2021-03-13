@@ -1,7 +1,7 @@
 import { mat4, mat3 } from "gl-matrix";
 import Transform from "./Transform";
 
-export type UniformList_TYPE = {
+export type UniformListItem_TYPE = {
   name: string;
   value: number[] | mat4 | mat3;
   type:

@@ -3,6 +3,7 @@ import Shader, { CubemapShader } from "./classes/Shader";
 import RenderLoop from "./classes/RenderLoop";
 import { Camera, CameraController } from "./classes/Camera";
 import Light, { RotatingLight } from "./classes/Light";
+import TextureManager from "./classes/Texture";
 import { IMAGE_DICTIONARY, TEXTURE_TYPE_TO_SLOT } from "./classes/Globals";
 
 import Grid from "./classes/primitives/Grid";
@@ -73,16 +74,18 @@ window.addEventListener("load", async () => {
 
   // TEXTURES
 
+  const tm = new TextureManager(gl);
+
   await Promise.all([
-    gl.loadTextures(IMAGE_DICTIONARY),
-    gl.loadCubeMap("dusk", "images/envmap_violentdays/violentdays"),
-    gl.loadCubeMap("night", "images/envmap_grimmnight/grimmnight"),
+    tm.loadTextures(IMAGE_DICTIONARY),
+    tm.loadCubeMap("dusk", "images/envmap_violentdays/violentdays"),
+    tm.loadCubeMap("night", "images/envmap_grimmnight/grimmnight"),
   ]);
 
-  const dusk = gl.getTexture("dusk");
-  const night = gl.getTexture("night");
-  const hyperdimension = gl.getTexture("hyperdimension");
-  const test = gl.getTexture("pirate");
+  const dusk = tm.getTexture("dusk");
+  const night = tm.getTexture("night");
+  const hyperdimension = tm.getTexture("hyperdimension");
+  const test = tm.getTexture("pirate");
 
   if (test) model.textures[TEXTURE_TYPE_TO_SLOT.diffuse] = test;
 
@@ -96,7 +99,7 @@ window.addEventListener("load", async () => {
   const onBeforeRender = () => {
     console.log("Preparing for rendering...");
 
-    gl.startPlayingVideo();
+    tm.startPlayingVideo();
   };
 
   const onRender = (speed = 1) => {
@@ -104,8 +107,8 @@ window.addEventListener("load", async () => {
 
     light.onRender(speed);
 
-    gl.updateVideoTexture();
-    const hyperdimension = gl.getTexture("hyperdimension");
+    tm.updateVideoTexture();
+    const hyperdimension = tm.getTexture("hyperdimension");
     if (hyperdimension)
       cube.textures[TEXTURE_TYPE_TO_SLOT.diffuse] = hyperdimension;
 
@@ -113,8 +116,8 @@ window.addEventListener("load", async () => {
     cubemapShader.renderModel(skybox, camera);
 
     shader.activate();
-    shader.renderModel(grid, camera, noLight);
     shader.renderModel(model, camera, light);
+    shader.renderModel(grid, camera, noLight);
     shader.renderModel(cube, camera, noLight);
     shader.renderModel(light.debugPixel, camera, noLight);
   };
