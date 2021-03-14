@@ -3,8 +3,10 @@ import ShaderUtil from "./ShaderUtil";
 
 import { SLOT_TO_TEXTURE_TYPE } from "./Globals";
 import { UniformListItem_TYPE, Model_TYPE } from "./Types";
+import Transform from "./Transform";
 import { Camera } from "./Camera";
 import Light from "./Light";
+import FrameBufferObject, { AfterRenderActionFbo } from "./FrameBufferObject";
 
 export default class Shader {
   gl: GL;
@@ -112,7 +114,25 @@ export default class Shader {
     return this;
   }
 
-  pushTexturesToGpu(
+  populateTransformUniforms(
+    transform: Transform,
+    uniformList: UniformListItem_TYPE[]
+  ): void {
+    uniformList.push.apply(uniformList, [
+      {
+        name: "u_ModelViewMatrix",
+        value: transform.modelViewMatrix,
+        type: "uniformMatrix4fv",
+      },
+      {
+        name: "u_NormalMatrix",
+        value: transform.normalMatrix,
+        type: "uniformMatrix3fv",
+      },
+    ]);
+  }
+
+  populateTextureUniforms(
     textures: (WebGLTexture | null)[],
     uniformList: UniformListItem_TYPE[]
   ): void {
@@ -207,40 +227,53 @@ export default class Shader {
     ]);
   }
 
-  renderModel(model: Model_TYPE, camera?: Camera, light?: Light): Shader {
+  draw(model: Model_TYPE): void {
     const { gl } = this;
-    const {
-      vao,
-      indexCount,
-      vertexCount,
-      drawMode,
-      transform,
-      textures,
-    } = model;
+    const { drawMode, indexCount, vertexCount } = model;
 
-    const uniformList: UniformListItem_TYPE[] = [
-      {
-        name: "u_ModelViewMatrix",
-        value: transform.modelViewMatrix,
-        type: "uniformMatrix4fv",
-      },
-      {
-        name: "u_NormalMatrix",
-        value: transform.normalMatrix,
-        type: "uniformMatrix3fv",
-      },
-    ];
+    if (indexCount) {
+      gl.drawElements(drawMode, indexCount, gl.UNSIGNED_SHORT, 0);
+    } else {
+      gl.drawArrays(drawMode, 0, vertexCount);
+    }
+  }
+
+  renderModel(
+    models: Model_TYPE[],
+    camera?: Camera,
+    light?: Light,
+    fbo?: FrameBufferObject
+  ): Shader {
+    const { gl } = this;
+
+    const uniformList: UniformListItem_TYPE[] = [];
 
     if (camera) this.populateCameraUniforms(uniformList, camera);
     if (light) this.populateLightUniforms(uniformList, light);
 
-    this.pushTexturesToGpu(textures, uniformList);
     this.pushUniformsToGpu(uniformList, true);
 
-    gl.bindVertexArray(vao);
+    models.forEach((model) => {
+      const { vao, transform, textures } = model;
 
-    if (indexCount) gl.drawElements(drawMode, indexCount, gl.UNSIGNED_SHORT, 0);
-    else gl.drawArrays(drawMode, 0, vertexCount);
+      const uniformList: UniformListItem_TYPE[] = [];
+
+      this.populateTransformUniforms(transform, uniformList);
+      this.populateTextureUniforms(textures, uniformList);
+
+      this.pushUniformsToGpu(uniformList, true);
+
+      gl.bindVertexArray(vao);
+
+      this.draw(model);
+
+      if (
+        fbo &&
+        typeof (fbo as AfterRenderActionFbo).onAfterRender === "function"
+      ) {
+        (fbo as AfterRenderActionFbo).onAfterRender(this, model);
+      }
+    });
 
     gl.bindVertexArray(null);
     gl.bindTexture(gl.TEXTURE_2D, null);
@@ -255,7 +288,7 @@ export class CubemapShader extends Shader {
     console.log("Preparing cubemap shader...");
   }
 
-  pushTexturesToGpu(
+  populateTextureUniforms(
     textures: (WebGLTexture | null)[],
     uniformList: UniformListItem_TYPE[]
   ): void {

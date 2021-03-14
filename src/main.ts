@@ -4,6 +4,8 @@ import RenderLoop from "./classes/RenderLoop";
 import { Camera, CameraController } from "./classes/Camera";
 import Light, { RotatingLight } from "./classes/Light";
 import TextureManager from "./classes/Texture";
+import { CameraUniformBufferObject } from "./classes/UniformBufferObject";
+import { PickerFrameBufferObject } from "./classes/FrameBufferObject";
 import { IMAGE_DICTIONARY, TEXTURE_TYPE_TO_SLOT } from "./classes/Globals";
 
 import Grid from "./classes/primitives/Grid";
@@ -43,6 +45,14 @@ window.addEventListener("load", async () => {
     position: [0, 2.5, 4],
     isIncremental: false,
   });
+
+  // UBO
+
+  const cameraUbo = new CameraUniformBufferObject(
+    gl,
+    [shader.program, cubemapShader.program],
+    "Camera"
+  );
 
   // MODELS
 
@@ -94,6 +104,10 @@ window.addEventListener("load", async () => {
 
   if (dusk && night) skybox.textures = [dusk, night];
 
+  // FBO
+
+  const pickerFbo = new PickerFrameBufferObject(gl, tm);
+
   // RENDER
 
   const onBeforeRender = () => {
@@ -104,25 +118,28 @@ window.addEventListener("load", async () => {
 
   const onRender = (speed = 1) => {
     gl.clearCanvas();
+    pickerFbo.clear();
 
     light.onRender(speed);
+    cameraUbo.updateCameraData(camera);
 
-    tm.updateVideoTexture();
-    const hyperdimension = tm.getTexture("hyperdimension");
-    if (hyperdimension)
-      cube.textures[TEXTURE_TYPE_TO_SLOT.diffuse] = hyperdimension;
+    // tm.updateVideoTexture();
+
+    // const hyperdimension = tm.getTexture("hyperdimension");
+
+    // if (hyperdimension) {
+    //   cube.textures[TEXTURE_TYPE_TO_SLOT.diffuse] = hyperdimension;
+    // }
 
     cubemapShader.activate();
-    cubemapShader.renderModel(skybox, camera);
+    cubemapShader.renderModel([skybox]);
 
     shader.activate();
-    shader.renderModel(model, camera, light);
-    shader.renderModel(grid, camera, noLight);
-    shader.renderModel(cube, camera, noLight);
-    shader.renderModel(light.debugPixel, camera, noLight);
+    shader.renderModel([model], _, light, pickerFbo);
+    shader.renderModel([grid, cube, light.debugPixel], _, noLight, pickerFbo);
   };
 
-  const renderLoop = new RenderLoop(onRender, onBeforeRender);
+  const renderLoop = new RenderLoop(gl, onRender, onBeforeRender);
 
   renderLoop.start();
 });

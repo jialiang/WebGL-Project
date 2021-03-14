@@ -2,6 +2,8 @@ export default `#version 300 es
 
 precision mediump float;
 
+uniform float u_ModelId;
+
 uniform float u_hasTexture;
 uniform sampler2D u_DiffuseTexture;
 
@@ -23,6 +25,11 @@ in vec3 cameraPosition;
 out vec4 finalColor;
 
 void main(void) {
+    if (u_ModelId != 0.0) {
+        finalColor = vec4(u_ModelId, 0.0, 0.0, 1.0);
+        return;
+    }
+
     vec4 baseColor = u_hasTexture * texture(u_DiffuseTexture, uv) - (u_hasTexture - 1.0) * color;
 
     // vec3 lowpolyNormal = normalize(cross(dFdx(position), dFdy(position)));

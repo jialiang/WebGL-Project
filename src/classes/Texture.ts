@@ -124,10 +124,12 @@ export default class TextureManager {
 
   loadTexture = (
     name: string,
-    image: TexImageSource,
+    image: TexImageSource | null,
     generateMipmaps = true,
     silent = false,
-    flipY = false
+    flipY = false,
+    width = 1,
+    height = 1
   ): WebGLTexture => {
     const { gl, textureList } = this;
 
@@ -143,7 +145,28 @@ export default class TextureManager {
     gl.bindTexture(gl.TEXTURE_2D, texture);
 
     // Push image to GPU
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+    if (image) {
+      gl.texImage2D(
+        gl.TEXTURE_2D,
+        0,
+        gl.RGBA,
+        gl.RGBA,
+        gl.UNSIGNED_BYTE,
+        image
+      );
+    } else {
+      gl.texImage2D(
+        gl.TEXTURE_2D,
+        0,
+        gl.RGBA,
+        width,
+        height,
+        0,
+        gl.RGBA,
+        gl.UNSIGNED_BYTE,
+        null
+      );
+    }
 
     // Setup up scaling
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);

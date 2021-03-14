@@ -6,11 +6,13 @@ layout(location = 2) in vec2 a_uv;
 layout(location = 3) in vec4 a_color;
 
 uniform mat4 u_ModelViewMatrix;
-uniform mat4 u_ProjectionMatrix;
-uniform mat4 u_ViewMatrix;
 uniform mat3 u_NormalMatrix;
 
-uniform vec3 u_CameraPosition;
+uniform Camera {
+    mat4 u_ProjectionMatrix;
+    mat4 u_ViewMatrix;
+    vec3 u_CameraPosition;
+};
 
 out vec3 position;
 out vec3 normal;

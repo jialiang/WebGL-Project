@@ -34,6 +34,7 @@ export type VaoOptions_TYPE = {
 };
 
 export type Model_TYPE = {
+  id: number;
   name: string;
   drawMode: GLenum;
   vao: WebGLVertexArrayObject;

@@ -31,7 +31,10 @@ declare global {
 }
 
 export default class GL extends WebGL2RenderingContext {
+  static MODEL_ID = 1;
+
   modelList: Record<string, Model_TYPE> = {};
+  idToModelName: string[] = [];
 
   constructor(id = "", width = 0, height = 0) {
     // @ts-expect-error WebGL2RenderingContextConstructor used instead of original constructor
@@ -59,7 +62,10 @@ export default class GL extends WebGL2RenderingContext {
     return this;
   }
 
-  getModel = (name = ""): Model_TYPE | undefined => this.modelList[name];
+  getModel = (name: string): Model_TYPE | undefined => this.modelList[name];
+
+  getModelById = (id: number): Model_TYPE | undefined =>
+    this.modelList[this.idToModelName[id]];
 
   clearCanvas = (): GL => {
     this.clear(this.COLOR_BUFFER_BIT | this.DEPTH_BUFFER_BIT);
@@ -167,6 +173,7 @@ export default class GL extends WebGL2RenderingContext {
     this.bindVertexArray(vao);
 
     const obj: Model_TYPE = {
+      id: GL.MODEL_ID,
       name,
       drawMode,
       vao,
@@ -187,10 +194,13 @@ export default class GL extends WebGL2RenderingContext {
       textures: new Array(TEXTURE_TYPE_COUNT).fill(null),
     };
 
+    GL.MODEL_ID += 1;
+
     this.bindVertexArray(null);
     this.bindBuffer(this.ELEMENT_ARRAY_BUFFER, null);
 
     this.modelList[obj.name] = obj;
+    this.idToModelName[obj.id] = obj.name;
 
     return obj;
   };
