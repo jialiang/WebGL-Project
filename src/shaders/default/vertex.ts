@@ -29,6 +29,6 @@ void main(void) {
     cameraPosition = (inverse(u_ViewMatrix) * vec4(u_CameraPosition, 1.0)).xyz;
 
     gl_PointSize = 50.0;
-    gl_Position = u_ProjectionMatrix * u_ViewMatrix * u_ModelViewMatrix * vec4(a_position.xyz, 1.0);
+    gl_Position = u_ProjectionMatrix * u_ViewMatrix * u_ModelViewMatrix * vec4(a_position, 1.0);
 }
 `;

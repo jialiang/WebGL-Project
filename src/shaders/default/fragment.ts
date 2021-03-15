@@ -5,7 +5,7 @@ precision mediump float;
 uniform float u_ModelId;
 
 uniform float u_hasTexture;
-uniform sampler2D u_DiffuseTexture;
+uniform sampler2D u_Diffuse_Texture;
 
 uniform vec3 u_LightPosition;
 uniform vec3 u_LightColor;
@@ -22,15 +22,11 @@ in vec4 color;
 
 in vec3 cameraPosition;
 
-out vec4 finalColor;
+layout(location = 0) out vec4 finalColor_0;
+layout(location = 1) out vec4 finalColor_1;
 
 void main(void) {
-    if (u_ModelId != 0.0) {
-        finalColor = vec4(u_ModelId, 0.0, 0.0, 1.0);
-        return;
-    }
-
-    vec4 baseColor = u_hasTexture * texture(u_DiffuseTexture, uv) - (u_hasTexture - 1.0) * color;
+    vec4 baseColor = u_hasTexture * texture(u_Diffuse_Texture, uv) - (u_hasTexture - 1.0) * color;
 
     // vec3 lowpolyNormal = normalize(cross(dFdx(position), dFdy(position)));
 
@@ -45,6 +41,7 @@ void main(void) {
     vec3 diffuseColor = u_DiffuseStrength * u_LightColor * lightNormalAngleDiff;
     vec3 specularColor = u_SpecularStrength * u_LightColor * pow(reflectionCameraAngleDiff, u_SpecularShininess);
 
-    finalColor = vec4(baseColor.rgb * (ambientColor + diffuseColor + specularColor), baseColor.a);
+    finalColor_0 = vec4(baseColor.rgb * (ambientColor + diffuseColor + specularColor), baseColor.a);
+    finalColor_1 = vec4(u_ModelId, 0.0, 0.0, 1.0);
 }
 `;

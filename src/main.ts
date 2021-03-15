@@ -1,5 +1,5 @@
 import GL from "./classes/GL";
-import Shader, { CubemapShader } from "./classes/Shader";
+import Shader from "./classes/Shader";
 import RenderLoop from "./classes/RenderLoop";
 import { Camera, CameraController } from "./classes/Camera";
 import Light, { RotatingLight } from "./classes/Light";
@@ -10,6 +10,7 @@ import { IMAGE_DICTIONARY, TEXTURE_TYPE_TO_SLOT } from "./classes/Globals";
 
 import Grid from "./classes/primitives/Grid";
 import Cube from "./classes/primitives/Cube";
+import Quad from "./classes/primitives/Quad";
 import ModelLoader from "./classes/primitives/ModelLoader";
 
 import defaultVertexShaderSrc from "./shaders/default/vertex";
@@ -17,6 +18,9 @@ import defaultFragmentShaderSrc from "./shaders/default/fragment";
 
 import cubemapVertexShaderSrc from "./shaders/cubemap/vertex";
 import cubemapFragmentShaderSrc from "./shaders/cubemap/fragment";
+
+import postVertexShaderSrc from "./shaders/post/vertex";
+import postFragmentShaderSrc from "./shaders/post/fragment";
 
 const _ = undefined;
 
@@ -30,11 +34,12 @@ window.addEventListener("load", async () => {
     defaultVertexShaderSrc,
     defaultFragmentShaderSrc
   );
-  const cubemapShader = new CubemapShader(
+  const cubemapShader = new Shader(
     gl,
     cubemapVertexShaderSrc,
     cubemapFragmentShaderSrc
   );
+  const postShader = new Shader(gl, postVertexShaderSrc, postFragmentShaderSrc);
 
   // CAMERAS
 
@@ -68,6 +73,9 @@ window.addEventListener("load", async () => {
   const skybox = gl.createVertexArrayObject(
     Cube.createCubeVaoData(gl, "skybox", 20, true)
   );
+  const postQuad = gl.createVertexArrayObject(
+    Quad.createQuadVaoData(gl, "postQuad", 2)
+  );
 
   cube.transform.setTransformation({
     position: [2, 0, 0],
@@ -95,18 +103,25 @@ window.addEventListener("load", async () => {
   const dusk = tm.getTexture("dusk");
   const night = tm.getTexture("night");
   const hyperdimension = tm.getTexture("hyperdimension");
-  const test = tm.getTexture("pirate");
+  const pirate = tm.getTexture("pirate");
+  // const test = tm.getTexture("test");
 
-  if (test) model.textures[TEXTURE_TYPE_TO_SLOT.diffuse] = test;
+  if (pirate) model.textures[TEXTURE_TYPE_TO_SLOT.diffuse] = pirate;
 
-  if (hyperdimension)
+  if (hyperdimension) {
     cube.textures[TEXTURE_TYPE_TO_SLOT.diffuse] = hyperdimension;
+  }
 
-  if (dusk && night) skybox.textures = [dusk, night];
+  if (dusk && night) {
+    skybox.textures[TEXTURE_TYPE_TO_SLOT.cubemap_0] = dusk;
+    skybox.textures[TEXTURE_TYPE_TO_SLOT.cubemap_1] = night;
+  }
 
   // FBO
 
-  const pickerFbo = new PickerFrameBufferObject(gl, tm);
+  const pickerFbo = new PickerFrameBufferObject(gl, tm, _, 2);
+
+  postQuad.textures[TEXTURE_TYPE_TO_SLOT.diffuse] = pickerFbo.colorBuffers[0];
 
   // RENDER
 
@@ -117,8 +132,7 @@ window.addEventListener("load", async () => {
   };
 
   const onRender = (speed = 1) => {
-    gl.clearCanvas();
-    pickerFbo.clear();
+    pickerFbo.clearFbo();
 
     light.onRender(speed);
     cameraUbo.updateCameraData(camera);
@@ -131,12 +145,19 @@ window.addEventListener("load", async () => {
     //   cube.textures[TEXTURE_TYPE_TO_SLOT.diffuse] = hyperdimension;
     // }
 
+    pickerFbo.activate();
+
     cubemapShader.activate();
     cubemapShader.renderModel([skybox]);
 
     shader.activate();
-    shader.renderModel([model], _, light, pickerFbo);
-    shader.renderModel([grid, cube, light.debugPixel], _, noLight, pickerFbo);
+    shader.renderModel([model], _, light);
+    shader.renderModel([grid, cube, light.debugPixel], _, noLight);
+
+    pickerFbo.deactivate();
+
+    postShader.activate();
+    postShader.renderModel([postQuad]);
   };
 
   const renderLoop = new RenderLoop(gl, onRender, onBeforeRender);

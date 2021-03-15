@@ -12,7 +12,7 @@ export default class RenderLoop {
   constructor(gl: GL, onRender: () => void, onBeforeRender?: () => void) {
     this.canvas = gl.canvas as HTMLCanvasElement;
     this.isActive = false;
-    this.fps = "0";
+    this.fps = "0.00";
 
     this.onRender = onRender;
     this.onBeforeRender = onBeforeRender;

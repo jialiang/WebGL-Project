@@ -1,7 +1,5 @@
 import GL from "./GL";
-import Shader from "./Shader";
 import TextureManager from "./Texture";
-import { Model_TYPE } from "./Types";
 
 const _ = undefined;
 
@@ -9,55 +7,64 @@ export default class FrameBufferObject {
   gl: GL;
   frameBuffer: WebGLFramebuffer;
   renderBuffer: WebGLRenderbuffer;
-  colorBuffer: WebGLTexture;
+  colorBuffers: WebGLTexture[];
 
-  constructor(gl: GL, tm: TextureManager, name = "Framebuffer") {
+  constructor(
+    gl: GL,
+    tm: TextureManager,
+    name = "Framebuffer",
+    colorBufferCount = 1
+  ) {
     console.log(`Creating frame buffer object ${name}...`);
 
     const canvas = gl.canvas;
-
     const frameBuffer = gl.createFramebuffer();
 
-    if (!frameBuffer) {
-      throw `Error initializing WebGL framebuffer`;
-    }
+    if (!frameBuffer) throw `Error initializing WebGL framebuffer`;
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, frameBuffer);
 
-    const colorBuffer = tm.loadTexture(
-      name,
-      null,
-      false,
-      _,
-      _,
-      canvas.width,
-      canvas.height
-    );
-    gl.bindTexture(gl.TEXTURE_2D, colorBuffer);
+    const colorBuffers = [];
+    const colorAttachments = [];
+
+    for (let index = 0; index < colorBufferCount; index++) {
+      const colorBuffer = tm.loadTexture(
+        `${name}_ColorBuffer_${index}`,
+        null,
+        false,
+        _,
+        _,
+        canvas.width,
+        canvas.height
+      );
+      const colorAttachment = gl.COLOR_ATTACHMENT0 + index;
+
+      gl.bindTexture(gl.TEXTURE_2D, colorBuffer);
+      gl.framebufferTexture2D(
+        gl.FRAMEBUFFER,
+        colorAttachment,
+        gl.TEXTURE_2D,
+        colorBuffer,
+        0
+      );
+
+      colorBuffers.push(colorBuffer);
+      colorAttachments.push(colorAttachment);
+    }
+
+    if (colorBufferCount > 1) gl.drawBuffers(colorAttachments);
 
     const renderBuffer = gl.createRenderbuffer();
 
-    if (!renderBuffer) {
-      throw `Error initializing WebGL renderbuffer`;
-    }
+    if (!renderBuffer) throw `Error initializing WebGL renderbuffer`;
 
     gl.bindRenderbuffer(gl.RENDERBUFFER, renderBuffer);
-
-    gl.framebufferTexture2D(
-      gl.FRAMEBUFFER,
-      gl.COLOR_ATTACHMENT0,
-      gl.TEXTURE_2D,
-      colorBuffer,
-      0
-    );
-
     gl.renderbufferStorage(
       gl.RENDERBUFFER,
       gl.DEPTH_COMPONENT16,
       canvas.width,
       canvas.height
     );
-
     gl.framebufferRenderbuffer(
       gl.FRAMEBUFFER,
       gl.DEPTH_ATTACHMENT,
@@ -71,17 +78,18 @@ export default class FrameBufferObject {
 
     this.gl = gl;
     this.frameBuffer = frameBuffer;
-    this.colorBuffer = colorBuffer;
+    this.colorBuffers = colorBuffers;
     this.renderBuffer = renderBuffer;
   }
 
-  readPixel(x = 0, y = 0): Uint8Array {
+  readPixel(x = 0, y = 0, colorBufferIndex = 0): Uint8Array {
     const { gl, frameBuffer } = this;
     const color = new Uint8Array(4);
 
-    gl.bindFramebuffer(gl.FRAMEBUFFER, frameBuffer);
+    gl.bindFramebuffer(gl.READ_FRAMEBUFFER, frameBuffer);
+    gl.readBuffer(gl.COLOR_ATTACHMENT0 + colorBufferIndex);
     gl.readPixels(x, y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, color);
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.bindFramebuffer(gl.READ_FRAMEBUFFER, null);
 
     return color;
   }
@@ -102,7 +110,7 @@ export default class FrameBufferObject {
     return this;
   }
 
-  clear(): FrameBufferObject {
+  clearFbo(): FrameBufferObject {
     const { gl, frameBuffer } = this;
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, frameBuffer);
@@ -113,27 +121,29 @@ export default class FrameBufferObject {
   }
 
   dispose(): FrameBufferObject {
-    const { gl, frameBuffer, colorBuffer, renderBuffer } = this;
+    const { gl, frameBuffer, colorBuffers, renderBuffer } = this;
 
     gl.deleteFramebuffer(frameBuffer);
-    gl.deleteTexture(colorBuffer);
     gl.deleteRenderbuffer(renderBuffer);
+
+    colorBuffers.forEach((colorBuffer) => {
+      gl.deleteTexture(colorBuffer);
+    });
 
     return this;
   }
 }
 
-export interface AfterRenderActionFbo extends FrameBufferObject {
-  onAfterRender(shader: Shader, model: Model_TYPE): void;
-}
-
-export class PickerFrameBufferObject
-  extends FrameBufferObject
-  implements AfterRenderActionFbo {
+export class PickerFrameBufferObject extends FrameBufferObject {
   messageBox: HTMLDivElement;
 
-  constructor(gl: GL, tm: TextureManager, name = "Framebuffer") {
-    super(gl, tm, name);
+  constructor(
+    gl: GL,
+    tm: TextureManager,
+    name = "PickerFramebuffer",
+    colorBufferCount = 1
+  ) {
+    super(gl, tm, name, colorBufferCount);
 
     const canvas = gl.canvas;
     const messageBox = document.createElement("div");
@@ -156,7 +166,7 @@ export class PickerFrameBufferObject
     const x = Math.round(pageX * devicePixelRatio);
     const y = gl.canvas.height - Math.round(pageY * devicePixelRatio);
 
-    const color = this.readPixel(x, y);
+    const color = this.readPixel(x, y, 1);
     const id = color[0];
 
     const model = gl.getModelById(id);
@@ -171,35 +181,5 @@ export class PickerFrameBufferObject
     const { messageBox } = this;
 
     messageBox.innerHTML = "";
-  }
-
-  onAfterRender(shader: Shader, model: Model_TYPE): void {
-    shader.pushUniformsToGpu(
-      [
-        {
-          name: "u_ModelId",
-          value: [model.id / 255],
-          type: "uniform1f",
-        },
-      ],
-      true
-    );
-
-    this.activate();
-
-    shader.draw(model);
-
-    this.deactivate();
-
-    shader.pushUniformsToGpu(
-      [
-        {
-          name: "u_ModelId",
-          value: [0.0],
-          type: "uniform1f",
-        },
-      ],
-      true
-    );
   }
 }

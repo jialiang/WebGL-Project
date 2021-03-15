@@ -35,9 +35,14 @@ export const IMAGE_DICTIONARY: ImageDictionary_TYPE[] = [
     url:
       "videos/Superdimension Neptune VS Sega Hard Girls - Opening Movie (Official).mp4",
   },
+  {
+    name: "test",
+    type: "image",
+    url: "images/checker-map.png",
+  },
 ];
 
-export const TEXTURE_TYPE_COUNT = 5;
+export const TEXTURE_TYPE_COUNT = 7;
 
 export const TEXTURE_TYPE_TO_SLOT = {
   diffuse: 0,
@@ -45,6 +50,8 @@ export const TEXTURE_TYPE_TO_SLOT = {
   displacement: 2,
   specularity: 3,
   roughness: 4,
+  cubemap_0: 5,
+  cubemap_1: 6,
 };
 
 export const SLOT_TO_TEXTURE_TYPE = [
@@ -53,4 +60,6 @@ export const SLOT_TO_TEXTURE_TYPE = [
   "Displacement",
   "Specularity",
   "Roughness",
+  "Cubemap_0",
+  "Cubemap_1",
 ];

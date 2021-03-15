@@ -2,21 +2,23 @@ export default `#version 300 es
 
 precision mediump float;
 
-uniform samplerCube u_CubemapTexture_0;
-uniform samplerCube u_CubemapTexture_1;
+uniform samplerCube u_Cubemap_0_Texture;
+uniform samplerCube u_Cubemap_1_Texture;
 
 uniform float u_Time;
 
 in vec3 uv;
 
-out vec4 finalColor;
+layout(location = 0) out vec4 finalColor_0;
+layout(location = 1) out vec4 finalColor_1;
 
 void main(void) {
-    finalColor = mix(
+    finalColor_0 = mix(
         texture(
-            u_CubemapTexture_0, uv), texture(u_CubemapTexture_1, uv), 
-            abs(sin(u_Time * 0.0000)
+            u_Cubemap_0_Texture, uv), texture(u_Cubemap_1_Texture, uv), 
+            abs(sin(u_Time * 0.0003)
         )
     );
+    finalColor_1 = vec4(0, 0, 0, 1);
 }
 `;
