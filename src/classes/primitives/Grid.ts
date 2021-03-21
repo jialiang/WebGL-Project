@@ -5,11 +5,13 @@ export default class Grid {
   static createGridVaoData(
     gl: GL,
     name = "grid",
+    size = 2,
     horizontalCount = 13,
     verticalCount = 13
   ): VaoOptions_TYPE {
     console.log(`Preparing ${name} VAO data...`);
 
+    const halfSize = size / 2;
     const positionArray = [];
 
     const totalVertices = (horizontalCount + verticalCount) * 2;
@@ -17,25 +19,25 @@ export default class Grid {
     const colorArray = Array(totalVertices * 4).fill(1);
 
     for (let i = 0; i < horizontalCount; i++) {
-      const y = (2 / (horizontalCount - 1)) * i - 1;
+      const y = (size / (horizontalCount - 1)) * i - halfSize;
 
       positionArray.push(y);
       positionArray.push(0);
-      positionArray.push(-1);
+      positionArray.push(-halfSize);
 
       positionArray.push(y);
       positionArray.push(0);
-      positionArray.push(1);
+      positionArray.push(halfSize);
     }
 
     for (let i = 0; i < verticalCount; i++) {
-      const x = (2 / (verticalCount - 1)) * i - 1;
+      const x = (size / (verticalCount - 1)) * i - halfSize;
 
-      positionArray.push(-1);
+      positionArray.push(-halfSize);
       positionArray.push(0);
       positionArray.push(x);
 
-      positionArray.push(1);
+      positionArray.push(halfSize);
       positionArray.push(0);
       positionArray.push(x);
     }

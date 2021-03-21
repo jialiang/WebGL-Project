@@ -1,5 +1,5 @@
 import GL from "./GL";
-import { ImageDictionary_TYPE } from "./Types";
+import { ImageDictionary_TYPE, TextureOptions_TYPE } from "./Types";
 
 export default class TextureManager {
   gl: GL;
@@ -110,27 +110,39 @@ export default class TextureManager {
 
     if (name && videoList[name]) {
       if (!videoList[name].paused) {
-        this.loadTexture(name, videoList[name], false, true);
+        this.loadTexture({
+          name,
+          image: videoList[name],
+          generateMipmaps: false,
+          silent: true,
+        });
       }
       return;
     }
 
     Object.keys(videoList).forEach((name) => {
       if (!videoList[name].paused) {
-        this.loadTexture(name, videoList[name], false, true);
+        this.loadTexture({
+          name,
+          image: videoList[name],
+          generateMipmaps: false,
+          silent: true,
+        });
       }
     });
   };
 
-  loadTexture = (
-    name: string,
-    image: TexImageSource | null,
-    generateMipmaps = true,
-    silent = false,
-    flipY = false,
-    width = 1,
-    height = 1
-  ): WebGLTexture => {
+  loadTexture = (options: TextureOptions_TYPE): WebGLTexture => {
+    const {
+      name,
+      image,
+      generateMipmaps = true,
+      silent = false,
+      flipY = false,
+      width = 1,
+      height = 1,
+    } = options;
+
     const { gl, textureList } = this;
 
     if (!silent) console.log(`Creating texture ${name}...`);
@@ -203,16 +215,16 @@ export default class TextureManager {
         const { name, type, url } = imageInfo;
         let source: TexImageSource | null = null;
 
-        if (type === "image") {
-          source = await this.getImageFromUrl(name, url);
-        }
-        if (type === "video") {
-          source = await this.getVideoFromUrl(name, url);
-        }
+        if (type === "image") source = await this.getImageFromUrl(name, url);
+        if (type === "video") source = await this.getVideoFromUrl(name, url);
 
         if (!source) return;
 
-        this.loadTexture(name, source, type === "image");
+        this.loadTexture({
+          name,
+          image: source,
+          generateMipmaps: type === "image",
+        });
       })
     )
       .then(() => {

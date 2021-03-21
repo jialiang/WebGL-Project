@@ -53,6 +53,17 @@ export type Model_TYPE = {
   textures: (WebGLTexture | null)[];
 };
 
+export type TextureOptions_TYPE = {
+  name: string;
+  image: TexImageSource | null;
+
+  generateMipmaps?: boolean;
+  silent?: boolean;
+  flipY?: boolean;
+  width?: number;
+  height?: number;
+};
+
 export type LightOptions_TYPE = {
   color?: [number, number, number];
   position?: [number, number, number];

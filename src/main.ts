@@ -61,8 +61,10 @@ window.addEventListener("load", async () => {
 
   // MODELS
 
-  const grid = gl.createVertexArrayObject(Grid.createGridVaoData(gl));
-  const cube = gl.createVertexArrayObject(Cube.createCubeVaoData(gl));
+  const grid = gl.createVertexArrayObject(
+    Grid.createGridVaoData(gl, "Grid", 20, 26, 26)
+  );
+  // const cube = gl.createVertexArrayObject(Cube.createCubeVaoData(gl));
   const model = gl.createVertexArrayObject(
     await ModelLoader.fromJson(
       gl,
@@ -77,9 +79,9 @@ window.addEventListener("load", async () => {
     Quad.createQuadVaoData(gl, "postQuad", 2)
   );
 
-  cube.transform.setTransformation({
-    position: [2, 0, 0],
-  });
+  // cube.transform.setTransformation({
+  //   position: [2, 0, 0],
+  // });
 
   // LIGHTS
 
@@ -102,15 +104,15 @@ window.addEventListener("load", async () => {
 
   const dusk = tm.getTexture("dusk");
   const night = tm.getTexture("night");
-  const hyperdimension = tm.getTexture("hyperdimension");
+  // const hyperdimension = tm.getTexture("hyperdimension");
   const pirate = tm.getTexture("pirate");
   // const test = tm.getTexture("test");
 
   if (pirate) model.textures[TEXTURE_TYPE_TO_SLOT.diffuse] = pirate;
 
-  if (hyperdimension) {
-    cube.textures[TEXTURE_TYPE_TO_SLOT.diffuse] = hyperdimension;
-  }
+  // if (hyperdimension) {
+  //   cube.textures[TEXTURE_TYPE_TO_SLOT.diffuse] = hyperdimension;
+  // }
 
   if (dusk && night) {
     skybox.textures[TEXTURE_TYPE_TO_SLOT.cubemap_0] = dusk;
@@ -119,21 +121,29 @@ window.addEventListener("load", async () => {
 
   // FBO
 
-  const pickerFbo = new PickerFrameBufferObject(gl, tm, _, 2);
+  // const maxSamples = gl.getParameter(gl.MAX_SAMPLES);
 
-  postQuad.textures[TEXTURE_TYPE_TO_SLOT.diffuse] = pickerFbo.colorBuffers[0];
+  // const msaaFbo = new FrameBufferObject(gl, tm, "Post FBO", maxSamples)
+  //   .addColorBuffers(2)
+  //   .addDepthbuffer();
+
+  const pickerFbo = new PickerFrameBufferObject(
+    gl,
+    tm,
+    "Picker FBO"
+  ).addDepthbuffer();
+
+  postQuad.textures[TEXTURE_TYPE_TO_SLOT.diffuse] = pickerFbo.colorbuffers[0];
 
   // RENDER
 
   const onBeforeRender = () => {
     console.log("Preparing for rendering...");
 
-    tm.startPlayingVideo();
+    // tm.startPlayingVideo();
   };
 
   const onRender = (speed = 1) => {
-    pickerFbo.clearFbo();
-
     light.onRender(speed);
     cameraUbo.updateCameraData(camera);
 
@@ -145,16 +155,26 @@ window.addEventListener("load", async () => {
     //   cube.textures[TEXTURE_TYPE_TO_SLOT.diffuse] = hyperdimension;
     // }
 
-    pickerFbo.activate();
+    // msaaFbo
+    //   .draw(() => {
+    //     cubemapShader.activate();
+    //     cubemapShader.renderModel([skybox]);
 
-    cubemapShader.activate();
-    cubemapShader.renderModel([skybox]);
+    //     shader.activate();
+    //     shader.renderModel([model], _, light);
+    //     shader.renderModel([grid, cube, light.debugPixel], _, noLight);
+    //   })
+    //   .copyTo(pickerFbo.framebuffer, 0)
+    //   .copyTo(pickerFbo.framebuffer, 1);
 
-    shader.activate();
-    shader.renderModel([model], _, light);
-    shader.renderModel([grid, cube, light.debugPixel], _, noLight);
+    pickerFbo.draw(() => {
+      cubemapShader.activate();
+      cubemapShader.renderModel([skybox]);
 
-    pickerFbo.deactivate();
+      shader.activate();
+      shader.renderModel([model], _, light);
+      shader.renderModel([grid, light.debugPixel], _, noLight);
+    });
 
     postShader.activate();
     postShader.renderModel([postQuad]);
